@@ -1,19 +1,18 @@
 import React from 'react';
-import { exportMappings } from '../utils/storage';
-import { AudioMapping, AppMode } from '../types';
+import { AppMode } from '../types';
 import styles from './Toolbar.module.css';
 
 interface Props {
   currentPage: number;
   totalPages: number;
   mode: AppMode;
-  mappings: AudioMapping;
   isAdmin: boolean;
   onPrevPage: () => void;
   onNextPage: () => void;
   onSetMode: (m: AppMode) => void;
   onImportPage: () => void;
-  onAdminToggle: () => void; // open login or logout
+  onAdminMenu: () => void;
+  onAdminToggle: () => void;
 }
 
 const ADMIN_MODES: { key: AppMode; icon: string; label: string; title: string }[] = [
@@ -28,8 +27,8 @@ const GUEST_MODES: { key: AppMode; icon: string; label: string; title: string }[
 ];
 
 export const Toolbar: React.FC<Props> = ({
-  currentPage, totalPages, mode, mappings, isAdmin,
-  onPrevPage, onNextPage, onSetMode, onImportPage, onAdminToggle,
+  currentPage, totalPages, mode, isAdmin,
+  onPrevPage, onNextPage, onSetMode, onImportPage, onAdminMenu, onAdminToggle,
 }) => {
   const modes = isAdmin ? ADMIN_MODES : GUEST_MODES;
 
@@ -60,13 +59,8 @@ export const Toolbar: React.FC<Props> = ({
       <div className={styles.actionsGroup}>
         {isAdmin && (
           <>
-            <button className={styles.iconBtn} onClick={onImportPage} title="Import image or PDF pages">📄</button>
-            <button
-              className={styles.iconBtn}
-              onClick={() => exportMappings(mappings)}
-              title="Export audio mappings"
-              disabled={Object.keys(mappings).length === 0}
-            >💾</button>
+            <button className={styles.iconBtn} onClick={onImportPage} title="Import PDF or images">📄</button>
+            <button className={styles.iconBtn} onClick={onAdminMenu} title="Admin actions">⚙️</button>
           </>
         )}
         <button
