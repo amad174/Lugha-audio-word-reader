@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { BoundingBox, AppMode } from './types';
-import { useOpenCV } from './hooks/useOpenCV';
 import { useMappings } from './hooks/useMappings';
 import { PageViewer } from './components/PageViewer';
 import { AudioModal } from './components/AudioModal';
@@ -9,12 +8,12 @@ import { importMappings } from './utils/storage';
 import './App.css';
 
 function App() {
-  const { ready: cvReady } = useOpenCV();
   const { mappings, assign, reload } = useMappings();
 
   const [pages, setPages] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
-  const [mode, setMode] = useState<AppMode>('play');
+  const [mode, setMode] = useState<AppMode>('draw');
+  const [boxes, setBoxes] = useState<BoundingBox[]>([]);
   const [pendingBox, setPendingBox] = useState<BoundingBox | null>(null);
 
   const pageInputRef = useRef<HTMLInputElement>(null);
@@ -22,21 +21,27 @@ function App() {
 
   const currentImage = pages[currentPage] ?? null;
 
+  // Reset boxes when page changes
+  const goToPage = useCallback((idx: number) => {
+    setCurrentPage(idx);
+    setBoxes([]);
+  }, []);
+
+  const handleBoxAdd = useCallback((box: BoundingBox) => {
+    setBoxes(prev => [...prev.filter(b => b.id !== box.id), box]);
+    setPendingBox(box); // immediately open audio assignment
+  }, []);
+
   const handleBoxClick = useCallback((box: BoundingBox) => {
     setPendingBox(box);
   }, []);
 
-  const handleAssign = useCallback(
-    (dataUrl: string) => {
-      if (pendingBox) {
-        assign(pendingBox.id, dataUrl);
-        setPendingBox(null);
-        // After drawing a box and assigning audio, drop back to play mode
-        setMode(m => m === 'draw' ? 'play' : m);
-      }
-    },
-    [pendingBox, assign]
-  );
+  const handleAssign = useCallback((dataUrl: string) => {
+    if (pendingBox) {
+      assign(pendingBox.id, dataUrl);
+      setPendingBox(null);
+    }
+  }, [pendingBox, assign]);
 
   const handlePageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -44,7 +49,7 @@ function App() {
     const newPages = Array.from(files).map(f => URL.createObjectURL(f));
     setPages(prev => {
       const next = [...prev, ...newPages];
-      if (prev.length === 0) setCurrentPage(0);
+      if (prev.length === 0) { setCurrentPage(0); setBoxes([]); }
       return next;
     });
     e.target.value = '';
@@ -64,9 +69,8 @@ function App() {
         totalPages={Math.max(pages.length, 1)}
         mode={mode}
         mappings={mappings}
-        cvReady={cvReady}
-        onPrevPage={() => setCurrentPage(p => Math.max(0, p - 1))}
-        onNextPage={() => setCurrentPage(p => Math.min(pages.length - 1, p + 1))}
+        onPrevPage={() => goToPage(Math.max(0, currentPage - 1))}
+        onNextPage={() => goToPage(Math.min(pages.length - 1, currentPage + 1))}
         onSetMode={setMode}
         onImportPage={() => pageInputRef.current?.click()}
       />
@@ -82,7 +86,9 @@ function App() {
             imageSrc={currentImage}
             mappings={mappings}
             mode={mode}
+            boxes={boxes}
             onBoxClick={handleBoxClick}
+            onBoxAdd={handleBoxAdd}
           />
         ) : (
           <EmptyState onImport={() => pageInputRef.current?.click()} />
@@ -111,9 +117,9 @@ function EmptyState({ onImport }: { onImport: () => void }) {
         <h3>How it works</h3>
         <ol>
           <li>Import a page image <strong>(📄)</strong></li>
-          <li>Use <strong>✏️ Assign</strong> — tap a detected box to assign audio</li>
-          <li>Use <strong>✒️ Draw</strong> — drag to create your own box</li>
-          <li>Use <strong>▶ Play</strong> — tap to hear audio</li>
+          <li>Use <strong>✒️ Draw</strong> — drag over a word or letter</li>
+          <li>Assign audio by uploading a file or recording</li>
+          <li>Use <strong>▶ Play</strong> — tap any box to hear it</li>
         </ol>
       </div>
     </div>
