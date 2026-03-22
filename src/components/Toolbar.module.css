@@ -31,18 +31,16 @@
   transition: background 0.15s;
   line-height: 1;
 }
-
 .navBtn:disabled { opacity: 0.3; cursor: not-allowed; }
 .navBtn:not(:disabled):hover { background: #0f3460; }
 
 .pageLabel {
   color: #ccc;
   font-size: 13px;
-  min-width: 46px;
+  min-width: 44px;
   text-align: center;
 }
 
-/* 3-button mode group */
 .modeGroup {
   display: flex;
   border-radius: 20px;
@@ -52,26 +50,22 @@
 }
 
 .modeBtn {
-  padding: 6px 12px;
+  padding: 6px 10px;
   border: none;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   background: transparent;
-  color: #888;
+  color: #666;
   transition: all 0.15s;
   white-space: nowrap;
 }
+.modeBtn:hover { color: #ccc; background: rgba(255,255,255,0.05); }
 
-.modeBtn:not(.play):not(.assign):not(.draw):hover {
-  color: #ccc;
-  background: #0f3460;
-}
-
-/* Active states per mode */
 .modeBtn.play   { background: #27ae60; color: #fff; }
 .modeBtn.assign { background: #e67e22; color: #fff; }
-.modeBtn.draw   { background: #e74c3c; color: #fff; }
+.modeBtn.draw   { background: #3498db; color: #fff; }
+.modeBtn.delete { background: #e74c3c; color: #fff; }
 
 .actionsGroup {
   display: flex;
@@ -85,15 +79,13 @@
   border-radius: 8px;
   border: 1px solid #0f3460;
   background: transparent;
-  font-size: 17px;
+  font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background 0.15s;
 }
-
 .iconBtn:disabled { opacity: 0.3; cursor: not-allowed; }
 .iconBtn:not(:disabled):hover { background: #0f3460; }
-
-.cvLoading { font-size: 15px; }
+.iconBtn.adminActive { border-color: #e67e22; }
