@@ -8,7 +8,8 @@ export function drawBoxes(
   selectedId: string | null,
   scaleX: number,
   scaleY: number,
-  drawPreview?: { x: number; y: number; w: number; h: number } | null
+  drawPreview?: { x: number; y: number; w: number; h: number } | null,
+  deleteMode = false
 ): void {
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -25,7 +26,11 @@ export function drawBoxes(
 
     ctx.save();
 
-    if (isSelected) {
+    if (deleteMode && isHovered) {
+      ctx.strokeStyle = '#e74c3c';
+      ctx.lineWidth = 2.5;
+      ctx.fillStyle = 'rgba(231,76,60,0.2)';
+    } else if (isSelected) {
       ctx.strokeStyle = '#f39c12';
       ctx.lineWidth = 3;
       ctx.fillStyle = 'rgba(243,156,18,0.25)';
@@ -47,17 +52,31 @@ export function drawBoxes(
     ctx.strokeRect(rx, ry, rw, rh);
 
     // Green dot = has audio
-    if (isMapped) {
+    if (isMapped && !deleteMode) {
       ctx.beginPath();
       ctx.arc(rx + rw - 5, ry + 5, 4, 0, Math.PI * 2);
       ctx.fillStyle = '#2ecc71';
       ctx.fill();
     }
 
+    // Delete X indicator on hover in delete mode
+    if (deleteMode && isHovered) {
+      const cx = rx + rw / 2;
+      const cy = ry + rh / 2;
+      const s = Math.min(rw, rh) * 0.25;
+      ctx.strokeStyle = '#e74c3c';
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx - s, cy - s); ctx.lineTo(cx + s, cy + s);
+      ctx.moveTo(cx + s, cy - s); ctx.lineTo(cx - s, cy + s);
+      ctx.stroke();
+    }
+
     ctx.restore();
   }
 
-  // In-progress draw preview
+  // Draw preview while dragging
   if (drawPreview && drawPreview.w > 4 && drawPreview.h > 4) {
     ctx.save();
     ctx.strokeStyle = '#e74c3c';
