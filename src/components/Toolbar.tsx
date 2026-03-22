@@ -16,15 +16,15 @@ interface Props {
   onAdminToggle: () => void; // open login or logout
 }
 
-const ADMIN_MODES: { key: AppMode; label: string; title: string }[] = [
-  { key: 'draw',   label: '✒️ Draw',   title: 'Drag to draw a box' },
-  { key: 'assign', label: '✏️ Assign', title: 'Tap a box to re-assign audio' },
-  { key: 'delete', label: '🗑️ Delete', title: 'Tap a box to delete it' },
-  { key: 'play',   label: '▶ Play',   title: 'Tap to hear audio' },
+const ADMIN_MODES: { key: AppMode; icon: string; label: string; title: string }[] = [
+  { key: 'draw',   icon: '✒️', label: 'Draw',   title: 'Drag to draw a box' },
+  { key: 'assign', icon: '✏️', label: 'Assign', title: 'Tap a box to re-assign audio' },
+  { key: 'delete', icon: '🗑️', label: 'Delete', title: 'Tap a box to delete it' },
+  { key: 'play',   icon: '▶',  label: 'Play',   title: 'Tap to hear audio' },
 ];
 
-const GUEST_MODES: { key: AppMode; label: string; title: string }[] = [
-  { key: 'play', label: '▶ Play', title: 'Tap to hear audio' },
+const GUEST_MODES: { key: AppMode; icon: string; label: string; title: string }[] = [
+  { key: 'play', icon: '▶', label: 'Play', title: 'Tap to hear audio' },
 ];
 
 export const Toolbar: React.FC<Props> = ({
@@ -51,7 +51,7 @@ export const Toolbar: React.FC<Props> = ({
             onClick={() => onSetMode(m.key)}
             title={m.title}
           >
-            {m.label}
+            {m.icon}<span className={styles.modeBtnLabel}> {m.label}</span>
           </button>
         ))}
       </div>

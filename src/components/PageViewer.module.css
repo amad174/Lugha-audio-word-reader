@@ -36,7 +36,12 @@
   left: 50%;
   transform: translateX(-50%);
   cursor: pointer;
+  /* touch-action set dynamically via inline style in draw mode */
   touch-action: manipulation;
+}
+
+.overlayDraw {
+  touch-action: none;
 }
 
 .detecting {
