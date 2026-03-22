@@ -19,7 +19,7 @@ import {
 import { exportBundle, importBundle } from './utils/storage';
 import { pdfToDataUrls } from './utils/pdf';
 import {
-  DEFAULT_GAME_CONFIG, getLevelForPoints, checkNewAchievements, ACHIEVEMENTS,
+  DEFAULT_GAME_CONFIG, getLevelForPoints, checkNewAchievements,
 } from './utils/game';
 import { Achievement } from './types';
 import './App.css';
@@ -74,8 +74,6 @@ function App() {
         setProfiles(pr);
         setGameConfig(gc);
         setLoading(false);
-        // Show profile select unless already admin
-        if (!isAdmin) setShowProfileSelect(true);
       })
       .catch(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -111,7 +109,7 @@ function App() {
 
   // ── Word heard — scoring ──────────────────────────────────────────────────
 
-  const handleWordHeard = useCallback((boxId: string) => {
+  const handleWordHeard = useCallback((_boxId: string) => {
     if (!currentProfile) return;
 
     const newWordsHeard = currentProfile.wordsHeard + 1;
@@ -431,7 +429,7 @@ function App() {
             setLevelUpData(null);
             // Show queued achievements after level up dismisses
             if (pendingAchievements.length > 0) {
-              const [first, ...rest] = pendingAchievements;
+              const [, ...rest] = pendingAchievements;
               setPendingAchievements(rest);
             }
           }}
