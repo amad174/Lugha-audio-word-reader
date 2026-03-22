@@ -4,21 +4,21 @@
   justify-content: space-between;
   background: #16213e;
   border-bottom: 1px solid #0f3460;
-  padding: 8px 12px;
+  padding: 6px 10px;
   height: 52px;
   flex-shrink: 0;
-  gap: 8px;
+  gap: 6px;
 }
 
 .navGroup {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .navBtn {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
   border: 1px solid #0f3460;
   background: transparent;
@@ -32,56 +32,60 @@
   line-height: 1;
 }
 
-.navBtn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.navBtn:not(:disabled):hover {
-  background: #0f3460;
-}
+.navBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+.navBtn:not(:disabled):hover { background: #0f3460; }
 
 .pageLabel {
   color: #ccc;
-  font-size: 14px;
-  min-width: 52px;
+  font-size: 13px;
+  min-width: 46px;
   text-align: center;
 }
 
-.modeBtn {
-  padding: 8px 18px;
+/* 3-button mode group */
+.modeGroup {
+  display: flex;
   border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid #0f3460;
+  flex-shrink: 0;
+}
+
+.modeBtn {
+  padding: 6px 12px;
   border: none;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  background: transparent;
+  color: #888;
+  transition: all 0.15s;
   white-space: nowrap;
 }
 
-.assignActive {
-  background: #e67e22;
-  color: #fff;
+.modeBtn:not(.play):not(.assign):not(.draw):hover {
+  color: #ccc;
+  background: #0f3460;
 }
 
-.playActive {
-  background: #27ae60;
-  color: #fff;
-}
+/* Active states per mode */
+.modeBtn.play   { background: #27ae60; color: #fff; }
+.modeBtn.assign { background: #e67e22; color: #fff; }
+.modeBtn.draw   { background: #e74c3c; color: #fff; }
 
 .actionsGroup {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .iconBtn {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   border: 1px solid #0f3460;
   background: transparent;
-  font-size: 18px;
+  font-size: 17px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -89,21 +93,7 @@
   transition: background 0.15s;
 }
 
-.iconBtn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
+.iconBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+.iconBtn:not(:disabled):hover { background: #0f3460; }
 
-.iconBtn:not(:disabled):hover {
-  background: #0f3460;
-}
-
-.cvLoading {
-  font-size: 16px;
-  animation: spin 2s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
+.cvLoading { font-size: 15px; }
