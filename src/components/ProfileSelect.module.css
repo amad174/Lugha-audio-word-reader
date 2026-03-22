@@ -1,0 +1,288 @@
+.screen {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, #1a2a5e 0%, #1a1a2e 60%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  padding: 24px 16px 32px;
+  z-index: 300;
+}
+
+/* ── Animated stars background ── */
+.stars {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 20% 15%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 25%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 40% 60%, rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 70%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 10% 80%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 40%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 10%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 30% 90%, rgba(255,255,255,0.4) 0%, transparent 100%);
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 28px;
+}
+
+.logo { font-size: 56px; line-height: 1; }
+
+.appTitle {
+  font-size: 30px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  color: #888;
+  font-size: 15px;
+}
+
+/* ── Profile grid ── */
+.profileGrid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 480px;
+  margin-bottom: 28px;
+}
+
+.profileCard {
+  background: linear-gradient(160deg, #1e2d5a, #16213e);
+  border: 1px solid #2a3f6f;
+  border-radius: 20px;
+  padding: 18px 14px 14px;
+  width: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+  position: relative;
+}
+.profileCard:hover, .profileCard:active {
+  transform: translateY(-3px) scale(1.03);
+  border-color: #e67e22;
+  box-shadow: 0 8px 24px rgba(230,126,34,0.25);
+}
+
+.cardAvatar { font-size: 48px; line-height: 1; }
+
+.cardName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardLevel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #f39c12;
+  font-weight: 600;
+}
+
+.cardBar {
+  width: 90%;
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+.cardBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, #e67e22, #f39c12);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.cardPoints { font-size: 11px; color: #666; }
+
+.cardBadges {
+  display: flex;
+  gap: 2px;
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.newProfileCard {
+  background: rgba(255,255,255,0.03);
+  border: 2px dashed #2a3f6f;
+  border-radius: 20px;
+  padding: 18px 14px;
+  width: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  min-height: 140px;
+}
+.newProfileCard:hover { border-color: #e67e22; background: rgba(230,126,34,0.05); }
+
+.newIcon { font-size: 36px; color: #444; line-height: 1; }
+.newLabel { font-size: 13px; color: #555; font-weight: 600; }
+
+/* ── Footer ── */
+.footer {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.guestBtn {
+  padding: 12px 28px;
+  background: transparent;
+  border: 1px solid #2a3f6f;
+  border-radius: 24px;
+  color: #888;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.guestBtn:hover { border-color: #555; color: #ccc; }
+
+.teacherBtn {
+  padding: 12px 20px;
+  background: transparent;
+  border: 1px solid #2a3f6f;
+  border-radius: 24px;
+  color: #666;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.teacherBtn:hover { border-color: #555; color: #aaa; }
+
+/* ── Create profile form ── */
+.createCard {
+  background: #16213e;
+  border: 1px solid #2a3f6f;
+  border-radius: 24px;
+  padding: 24px 20px 28px;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  margin-bottom: 4px;
+}
+.backBtn:hover { color: #ccc; }
+
+.createTitle {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.nameInput {
+  background: #0f1c3a;
+  border: 1px solid #2a3f6f;
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #fff;
+  font-size: 16px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.nameInput:focus { border-color: #e67e22; }
+
+.nameError { font-size: 12px; color: #e74c3c; margin-top: -6px; }
+
+.avatarGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.avatarBtn {
+  background: rgba(255,255,255,0.04);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  font-size: 26px;
+  padding: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+}
+.avatarBtn:hover { background: rgba(255,255,255,0.08); }
+.avatarSelected {
+  border-color: #e67e22;
+  background: rgba(230,126,34,0.15);
+  transform: scale(1.1);
+}
+
+.previewRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  padding: 10px 16px;
+}
+.previewAvatar { font-size: 32px; line-height: 1; }
+.previewName { font-size: 16px; font-weight: 700; color: #fff; }
+
+.createBtn {
+  padding: 14px;
+  background: linear-gradient(135deg, #e67e22, #f39c12);
+  border: none;
+  border-radius: 14px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+  margin-top: 4px;
+}
+.createBtn:hover { opacity: 0.9; transform: scale(1.02); }
+.createBtn:active { transform: scale(0.98); }

@@ -14,6 +14,8 @@ interface Props {
   onBoxClick: (box: BoundingBox) => void;
   onBoxAdd: (box: BoundingBox) => void;
   onBoxDelete: (id: string) => void;
+  onWordHeard?: (boxId: string) => void;
+  onSwipe?: (dir: 'left' | 'right') => void;
 }
 
 interface DrawState {
@@ -26,11 +28,12 @@ const EMPTY_DRAW: DrawState = { active: false, startX: 0, startY: 0, currentX: 0
 
 export const PageViewer: React.FC<Props> = ({
   imageSrc, mappings, mode, boxes, isAdmin,
-  onBoxClick, onBoxAdd, onBoxDelete,
+  onBoxClick, onBoxAdd, onBoxDelete, onWordHeard, onSwipe,
 }) => {
   const imgRef = useRef<HTMLImageElement>(null);
   const imageCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -63,7 +66,6 @@ export const PageViewer: React.FC<Props> = ({
   useEffect(() => {
     updateScale();
     window.addEventListener('resize', updateScale);
-    // ResizeObserver catches layout shifts on mobile (address bar, keyboard, orientation)
     const ro = new ResizeObserver(updateScale);
     if (imgRef.current) ro.observe(imgRef.current);
     return () => { window.removeEventListener('resize', updateScale); ro.disconnect(); };
@@ -103,6 +105,10 @@ export const PageViewer: React.FC<Props> = ({
   };
 
   const onDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    // Record touch start for swipe detection
+    if ('touches' in e && e.touches[0]) {
+      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
     if (mode !== 'draw') return;
     const { clientX, clientY } = xy(e);
     const { px, py } = toXY(clientX, clientY);
@@ -122,6 +128,18 @@ export const PageViewer: React.FC<Props> = ({
   }, [mode, draw.active, toXY, getBoxAt]);
 
   const onUp = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    // Detect horizontal swipe on touch (non-draw modes only)
+    if (mode !== 'draw' && 'changedTouches' in e && e.changedTouches[0] && touchStartRef.current) {
+      const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+      const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+      touchStartRef.current = null;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        onSwipe?.(dx < 0 ? 'left' : 'right');
+        return;
+      }
+    }
+    touchStartRef.current = null;
+
     // Finish drawing a new box
     if (mode === 'draw' && draw.active) {
       setDraw(EMPTY_DRAW);
@@ -164,12 +182,13 @@ export const PageViewer: React.FC<Props> = ({
       // play mode
       if (mappings[box.id]) {
         playAudio(mappings[box.id]).catch(console.error);
+        onWordHeard?.(box.id);
       } else if (isAdmin) {
-        onBoxClick(box); // admin can still assign from play mode
+        onBoxClick(box);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, draw, scaleX, scaleY, getBoxAt, mappings, onBoxClick, onBoxAdd, onBoxDelete, isAdmin]);
+  }, [mode, draw, scaleX, scaleY, getBoxAt, mappings, onBoxClick, onBoxAdd, onBoxDelete, isAdmin, onWordHeard, onSwipe]);
 
   const cursor =
     mode === 'draw' ? 'crosshair' :
