@@ -1,0 +1,109 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #16213e;
+  border-bottom: 1px solid #0f3460;
+  padding: 8px 12px;
+  height: 52px;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.navGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.navBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #0f3460;
+  background: transparent;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  line-height: 1;
+}
+
+.navBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.navBtn:not(:disabled):hover {
+  background: #0f3460;
+}
+
+.pageLabel {
+  color: #ccc;
+  font-size: 14px;
+  min-width: 52px;
+  text-align: center;
+}
+
+.modeBtn {
+  padding: 8px 18px;
+  border-radius: 20px;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.assignActive {
+  background: #e67e22;
+  color: #fff;
+}
+
+.playActive {
+  background: #27ae60;
+  color: #fff;
+}
+
+.actionsGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.iconBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid #0f3460;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.iconBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.iconBtn:not(:disabled):hover {
+  background: #0f3460;
+}
+
+.cvLoading {
+  font-size: 16px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
