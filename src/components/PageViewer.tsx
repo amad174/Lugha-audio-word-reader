@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { BoundingBox, AudioMapping, AppMode } from '../types';
-import { detectBoxes, drawBoxes, isOpenCVReady } from '../utils/opencv';
+import { drawBoxes } from '../utils/canvas';
 import { getBoxHash } from '../utils/hash';
 import { playAudio } from '../utils/audio';
 import styles from './PageViewer.module.css';
@@ -9,7 +9,9 @@ interface Props {
   imageSrc: string;
   mappings: AudioMapping;
   mode: AppMode;
+  boxes: BoundingBox[];
   onBoxClick: (box: BoundingBox) => void;
+  onBoxAdd: (box: BoundingBox) => void;
 }
 
 interface DrawState {
@@ -22,27 +24,19 @@ interface DrawState {
 
 const EMPTY_DRAW: DrawState = { active: false, startX: 0, startY: 0, currentX: 0, currentY: 0 };
 
-export const PageViewer: React.FC<Props> = ({ imageSrc, mappings, mode, onBoxClick }) => {
+export const PageViewer: React.FC<Props> = ({
+  imageSrc, mappings, mode, boxes, onBoxClick, onBoxAdd,
+}) => {
   const imgRef = useRef<HTMLImageElement>(null);
   const imageCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
 
-  const [boxes, setBoxes] = useState<BoundingBox[]>([]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detecting, setDetecting] = useState(false);
   const [scaleX, setScaleX] = useState(1);
   const [scaleY, setScaleY] = useState(1);
   const [imgNatural, setImgNatural] = useState({ w: 0, h: 0 });
   const [draw, setDraw] = useState<DrawState>(EMPTY_DRAW);
-
-  const renderImageToCanvas = useCallback((img: HTMLImageElement) => {
-    const canvas = imageCanvasRef.current!;
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    canvas.getContext('2d')!.drawImage(img, 0, 0);
-    return canvas;
-  }, []);
 
   const updateScale = useCallback(() => {
     if (!imgRef.current || imgNatural.w === 0) return;
@@ -59,21 +53,20 @@ export const PageViewer: React.FC<Props> = ({ imageSrc, mappings, mode, onBoxCli
     const img = imgRef.current;
     if (!img) return;
     setImgNatural({ w: img.naturalWidth, h: img.naturalHeight });
-    if (!isOpenCVReady()) return;
-    setDetecting(true);
-    setTimeout(() => {
-      try {
-        const canvas = renderImageToCanvas(img);
-        setBoxes(detectBoxes(canvas));
-      } catch (e) {
-        console.error('Detection failed', e);
-      } finally {
-        setDetecting(false);
-      }
-    }, 50);
-  }, [renderImageToCanvas]);
+    // render image to offscreen canvas so getBoxHash can sample pixels
+    const canvas = imageCanvasRef.current!;
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.getContext('2d')!.drawImage(img, 0, 0);
+  }, []);
 
-  // Redraw overlay whenever anything changes
+  useEffect(() => {
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, [updateScale]);
+
+  // Redraw overlay
   useEffect(() => {
     if (!overlayRef.current) return;
     const preview = draw.active
@@ -82,12 +75,6 @@ export const PageViewer: React.FC<Props> = ({ imageSrc, mappings, mode, onBoxCli
       : null;
     drawBoxes(overlayRef.current, boxes, mappings, hoveredId, selectedId, scaleX, scaleY, preview);
   }, [boxes, mappings, hoveredId, selectedId, scaleX, scaleY, draw]);
-
-  useEffect(() => {
-    updateScale();
-    window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
-  }, [updateScale]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -140,10 +127,9 @@ export const PageViewer: React.FC<Props> = ({ imageSrc, mappings, mode, onBoxCli
   const onUp = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (mode === 'draw' && draw.active) {
       setDraw(EMPTY_DRAW);
-
       const pw = Math.abs(draw.currentX - draw.startX);
       const ph = Math.abs(draw.currentY - draw.startY);
-      if (pw < 12 || ph < 12) return; // too small, ignore
+      if (pw < 12 || ph < 12) return;
 
       const x0 = Math.min(draw.startX, draw.currentX);
       const y0 = Math.min(draw.startY, draw.currentY);
@@ -152,19 +138,16 @@ export const PageViewer: React.FC<Props> = ({ imageSrc, mappings, mode, onBoxCli
       const imgW = Math.round(pw / scaleX);
       const imgH = Math.round(ph / scaleY);
 
-      const imageCanvas = imageCanvasRef.current;
-      if (!imageCanvas) return;
+      const id = imageCanvasRef.current
+        ? getBoxHash(imageCanvasRef.current, imgX, imgY, imgW, imgH)
+        : `${imgX}-${imgY}-${imgW}-${imgH}`;
 
-      const id = getBoxHash(imageCanvas, imgX, imgY, imgW, imgH);
       const newBox: BoundingBox = { x: imgX, y: imgY, w: imgW, h: imgH, id };
-
-      setBoxes(prev => [...prev.filter(b => b.id !== id), newBox]);
       setSelectedId(id);
-      onBoxClick(newBox);
+      onBoxAdd(newBox);
       return;
     }
 
-    // Play / Assign mode
     const { clientX, clientY } = clientOf(e);
     const box = getBoxAt(clientX, clientY);
     if (!box) return;
@@ -172,7 +155,7 @@ export const PageViewer: React.FC<Props> = ({ imageSrc, mappings, mode, onBoxCli
 
     if (mode === 'assign') {
       onBoxClick(box);
-    } else {
+    } else if (mode === 'play') {
       if (mappings[box.id]) {
         playAudio(mappings[box.id]).catch(console.error);
       } else {
@@ -180,21 +163,14 @@ export const PageViewer: React.FC<Props> = ({ imageSrc, mappings, mode, onBoxCli
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, draw, scaleX, scaleY, getBoxAt, mappings, onBoxClick]);
+  }, [mode, draw, scaleX, scaleY, getBoxAt, mappings, onBoxClick, onBoxAdd]);
 
   return (
     <div className={styles.container}>
       <canvas ref={imageCanvasRef} className={styles.hiddenCanvas} />
-
       <div className={styles.imageWrapper}>
-        <img
-          ref={imgRef}
-          src={imageSrc}
-          alt="Iqra page"
-          className={styles.pageImage}
-          onLoad={handleImageLoad}
-          draggable={false}
-        />
+        <img ref={imgRef} src={imageSrc} alt="Iqra page"
+          className={styles.pageImage} onLoad={handleImageLoad} draggable={false} />
         <canvas
           ref={overlayRef}
           className={styles.overlay}
@@ -208,15 +184,12 @@ export const PageViewer: React.FC<Props> = ({ imageSrc, mappings, mode, onBoxCli
           onTouchEnd={onUp}
         />
       </div>
-
-      {detecting && <div className={styles.detecting}>Scanning page…</div>}
-
       <div className={styles.stats}>
         {mode === 'draw'
           ? 'Draw mode — drag to create a box'
           : boxes.length > 0
-          ? `${boxes.length} regions · ${Object.keys(mappings).length} mapped`
-          : ''}
+          ? `${boxes.length} boxes · ${Object.keys(mappings).length} with audio`
+          : 'Switch to Draw mode to create boxes'}
       </div>
     </div>
   );
