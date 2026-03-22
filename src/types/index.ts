@@ -16,4 +16,4 @@ export interface PageData {
   boxes: BoundingBox[];
 }
 
-export type AppMode = 'view' | 'assign' | 'play';
+export type AppMode = 'play' | 'assign' | 'draw';

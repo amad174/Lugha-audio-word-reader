@@ -5,7 +5,6 @@ declare const cv: any;
 
 let cvReady = false;
 
-/** Resolves when OpenCV is loaded and ready */
 export function waitForOpenCV(): Promise<void> {
   return new Promise((resolve) => {
     if (typeof cv !== 'undefined' && cv.Mat) {
@@ -28,9 +27,15 @@ export function isOpenCVReady(): boolean {
 }
 
 /**
- * Detect bounding boxes for Arabic letters/words in an image.
- * Uses adaptive threshold + contour detection.
- * Returns boxes sorted right-to-left, top-to-bottom (Arabic reading order).
+ * Detect bounding boxes for Arabic letters/words.
+ *
+ * Strategy:
+ *  1. Grayscale → threshold (RETR_LIST gets ALL contours, not just external,
+ *     so letters inside decorative borders are included)
+ *  2. Dilate horizontally to merge nearby strokes into word/letter clusters
+ *  3. Find contours on dilated image → word-level boxes
+ *  4. Filter noise and overly large regions (page border, etc.)
+ *  5. Sort right-to-left, top-to-bottom (Arabic reading order)
  */
 export function detectBoxes(
   imageCanvas: HTMLCanvasElement,
@@ -38,78 +43,100 @@ export function detectBoxes(
     minArea?: number;
     maxArea?: number;
     padding?: number;
+    dilateW?: number;
+    dilateH?: number;
   } = {}
 ): BoundingBox[] {
-  const { minArea = 100, maxArea = 50000, padding = 4 } = options;
+  const {
+    minArea = 200,
+    maxArea = 0.08, // fraction of total image area (filters page border)
+    padding = 5,
+    dilateW = 18,   // horizontal dilation merges Arabic letter strokes into words
+    dilateH = 8,
+  } = options;
+
+  const totalArea = imageCanvas.width * imageCanvas.height;
+  const maxPx = typeof maxArea === 'number' && maxArea < 1
+    ? totalArea * maxArea
+    : (maxArea as number);
 
   const src = cv.imread(imageCanvas);
   const gray = new cv.Mat();
-  const blurred = new cv.Mat();
   const thresh = new cv.Mat();
+  const dilated = new cv.Mat();
   const contours = new cv.MatVector();
   const hierarchy = new cv.Mat();
 
   try {
-    // 1. Grayscale
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
-    // 2. Slight blur to reduce noise
-    cv.GaussianBlur(gray, blurred, new cv.Size(3, 3), 0);
-
-    // 3. Adaptive threshold – works well for scanned book pages
+    // Adaptive threshold – handles uneven lighting in scanned pages
     cv.adaptiveThreshold(
-      blurred,
+      gray,
       thresh,
       255,
       cv.ADAPTIVE_THRESH_GAUSSIAN_C,
       cv.THRESH_BINARY_INV,
-      15,
-      8
+      21,
+      10
     );
 
-    // 4. Find contours
-    cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+    // Dilate to merge nearby Arabic strokes/dots into single word blobs
+    const kernel = cv.getStructuringElement(
+      cv.MORPH_RECT,
+      new cv.Size(dilateW, dilateH)
+    );
+    cv.dilate(thresh, dilated, kernel);
+    kernel.delete();
+
+    // RETR_EXTERNAL on the *dilated* image gives us merged word clusters
+    cv.findContours(dilated, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
     const boxes: BoundingBox[] = [];
 
     for (let i = 0; i < contours.size(); i++) {
       const cnt = contours.get(i);
       const rect = cv.boundingRect(cnt);
-      const area = rect.width * rect.height;
-
-      if (area >= minArea && area <= maxArea) {
-        // Apply padding (clamped to canvas bounds)
-        const x = Math.max(0, rect.x - padding);
-        const y = Math.max(0, rect.y - padding);
-        const w = Math.min(imageCanvas.width - x, rect.width + padding * 2);
-        const h = Math.min(imageCanvas.height - y, rect.height + padding * 2);
-
-        const id = getBoxHash(imageCanvas, x, y, w, h);
-        boxes.push({ x, y, w, h, id });
-      }
       cnt.delete();
+
+      const area = rect.width * rect.height;
+      if (area < minArea || area > maxPx) continue;
+
+      // Skip extremely wide boxes (likely full-page decorative lines)
+      if (rect.width > imageCanvas.width * 0.85) continue;
+      // Skip extremely tall boxes
+      if (rect.height > imageCanvas.height * 0.35) continue;
+
+      const x = Math.max(0, rect.x - padding);
+      const y = Math.max(0, rect.y - padding);
+      const w = Math.min(imageCanvas.width - x, rect.width + padding * 2);
+      const h = Math.min(imageCanvas.height - y, rect.height + padding * 2);
+
+      const id = getBoxHash(imageCanvas, x, y, w, h);
+      boxes.push({ x, y, w, h, id });
     }
 
-    // Sort: top-to-bottom rows, right-to-left within rows (Arabic)
+    // Sort: top-to-bottom rows, right-to-left within each row (Arabic)
     boxes.sort((a, b) => {
-      const rowDiff = Math.abs(a.y - b.y);
-      if (rowDiff > 20) return a.y - b.y;
-      return b.x - a.x; // right-to-left
+      const rowThreshold = Math.min(a.h, b.h) * 0.5;
+      const sameRow = Math.abs(a.y - b.y) < rowThreshold;
+      if (sameRow) return b.x - a.x;
+      return a.y - b.y;
     });
 
     return boxes;
   } finally {
     src.delete();
     gray.delete();
-    blurred.delete();
     thresh.delete();
+    dilated.delete();
     contours.delete();
     hierarchy.delete();
   }
 }
 
 /**
- * Draw boxes on an overlay canvas.
+ * Draw all boxes on the overlay canvas.
  */
 export function drawBoxes(
   overlayCanvas: HTMLCanvasElement,
@@ -118,7 +145,8 @@ export function drawBoxes(
   hoveredId: string | null,
   selectedId: string | null,
   scaleX: number,
-  scaleY: number
+  scaleY: number,
+  drawPreview?: { x: number; y: number; w: number; h: number } | null
 ): void {
   const ctx = overlayCanvas.getContext('2d')!;
   ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
@@ -143,7 +171,7 @@ export function drawBoxes(
       ctx.lineWidth = 1.5;
       ctx.fillStyle = 'rgba(39,174,96,0.08)';
     } else {
-      ctx.strokeStyle = 'rgba(52,152,219,0.6)';
+      ctx.strokeStyle = 'rgba(52,152,219,0.55)';
       ctx.lineWidth = 1;
       ctx.fillStyle = 'rgba(52,152,219,0.04)';
     }
@@ -156,14 +184,25 @@ export function drawBoxes(
     ctx.fillRect(rx, ry, rw, rh);
     ctx.strokeRect(rx, ry, rw, rh);
 
-    // Small dot indicator if mapped
     if (isMapped) {
       ctx.beginPath();
-      ctx.arc(rx + rw - 4, ry + 4, 3, 0, Math.PI * 2);
+      ctx.arc(rx + rw - 5, ry + 5, 3.5, 0, Math.PI * 2);
       ctx.fillStyle = '#2ecc71';
       ctx.fill();
     }
 
+    ctx.restore();
+  }
+
+  // Draw in-progress manual box
+  if (drawPreview && drawPreview.w > 4 && drawPreview.h > 4) {
+    ctx.save();
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 3]);
+    ctx.fillStyle = 'rgba(231,76,60,0.12)';
+    ctx.fillRect(drawPreview.x, drawPreview.y, drawPreview.w, drawPreview.h);
+    ctx.strokeRect(drawPreview.x, drawPreview.y, drawPreview.w, drawPreview.h);
     ctx.restore();
   }
 }
