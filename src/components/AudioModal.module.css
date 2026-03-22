@@ -1,0 +1,158 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.modal {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 360px;
+  color: #e0e0e0;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  text-align: center;
+  color: #fff;
+}
+
+.tabs {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #0f3460;
+  margin-bottom: 20px;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px;
+  background: transparent;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.tab.active {
+  background: #0f3460;
+  color: #fff;
+  font-weight: 600;
+}
+
+.content {
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.fileInput {
+  display: none;
+}
+
+.uploadBtn, .recordBtn, .previewBtn {
+  padding: 12px 24px;
+  border-radius: 10px;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.uploadBtn {
+  background: #0f3460;
+  color: #fff;
+}
+
+.recordBtn {
+  background: #e74c3c;
+  color: #fff;
+}
+
+.recordBtn.recording {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.previewBtn {
+  background: #27ae60;
+  color: #fff;
+  padding: 8px 18px;
+  font-size: 14px;
+}
+
+.previewSection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.readyText {
+  color: #2ecc71;
+  font-size: 13px;
+}
+
+.hint {
+  color: #aaa;
+  font-size: 13px;
+}
+
+.error {
+  color: #e74c3c;
+  font-size: 13px;
+  text-align: center;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.cancelBtn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #555;
+  background: transparent;
+  color: #aaa;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.assignBtn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: #e67e22;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.assignBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
