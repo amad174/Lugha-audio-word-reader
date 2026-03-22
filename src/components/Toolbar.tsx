@@ -1,5 +1,5 @@
 import React from 'react';
-import { AppMode } from '../types';
+import { AppMode, UserProfile } from '../types';
 import styles from './Toolbar.module.css';
 
 interface Props {
@@ -7,12 +7,14 @@ interface Props {
   totalPages: number;
   mode: AppMode;
   isAdmin: boolean;
+  currentProfile: UserProfile | null;
   onPrevPage: () => void;
   onNextPage: () => void;
   onSetMode: (m: AppMode) => void;
   onImportPage: () => void;
   onAdminMenu: () => void;
   onAdminToggle: () => void;
+  onSwitchProfile: () => void;
 }
 
 const ADMIN_MODES: { key: AppMode; icon: string; label: string; title: string }[] = [
@@ -27,8 +29,8 @@ const GUEST_MODES: { key: AppMode; icon: string; label: string; title: string }[
 ];
 
 export const Toolbar: React.FC<Props> = ({
-  currentPage, totalPages, mode, isAdmin,
-  onPrevPage, onNextPage, onSetMode, onImportPage, onAdminMenu, onAdminToggle,
+  currentPage, totalPages, mode, isAdmin, currentProfile,
+  onPrevPage, onNextPage, onSetMode, onImportPage, onAdminMenu, onAdminToggle, onSwitchProfile,
 }) => {
   const modes = isAdmin ? ADMIN_MODES : GUEST_MODES;
 
@@ -57,19 +59,42 @@ export const Toolbar: React.FC<Props> = ({
 
       {/* Right actions */}
       <div className={styles.actionsGroup}>
-        {isAdmin && (
+        {isAdmin ? (
           <>
             <button className={styles.iconBtn} onClick={onImportPage} title="Import PDF or images">📄</button>
             <button className={styles.iconBtn} onClick={onAdminMenu} title="Admin actions">⚙️</button>
+            <button
+              className={`${styles.iconBtn} ${styles.adminActive}`}
+              onClick={onAdminToggle}
+              title="Logout (switch to guest)"
+            >
+              👤
+            </button>
+          </>
+        ) : (
+          <>
+            {currentProfile ? (
+              <button
+                className={styles.profileBtn}
+                onClick={onSwitchProfile}
+                title="Switch profile"
+              >
+                {currentProfile.avatar}
+              </button>
+            ) : (
+              <button className={styles.iconBtn} onClick={onSwitchProfile} title="Sign in">
+                👤
+              </button>
+            )}
+            <button
+              className={styles.iconBtn}
+              onClick={onAdminToggle}
+              title="Teacher login"
+            >
+              🔐
+            </button>
           </>
         )}
-        <button
-          className={`${styles.iconBtn} ${isAdmin ? styles.adminActive : ''}`}
-          onClick={onAdminToggle}
-          title={isAdmin ? 'Logout (switch to guest)' : 'Admin login'}
-        >
-          {isAdmin ? '👤' : '🔐'}
-        </button>
       </div>
     </div>
   );

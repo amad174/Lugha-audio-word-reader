@@ -1,0 +1,72 @@
+.hud {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: #0f1c3a;
+  border: none;
+  border-bottom: 1px solid #0f3460;
+  padding: 6px 14px;
+  cursor: pointer;
+  text-align: left;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.hud:hover { background: #132050; }
+
+.avatar { font-size: 26px; line-height: 1; flex-shrink: 0; }
+
+.info { flex: 1; min-width: 0; }
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3px;
+}
+
+.name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+
+.levelBadge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #f39c12;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.barWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bar {
+  flex: 1;
+  height: 5px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background: linear-gradient(90deg, #e67e22, #f39c12);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.pts {
+  font-size: 10px;
+  color: #555;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
