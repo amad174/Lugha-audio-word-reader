@@ -1,17 +1,17 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { BoundingBox, AppMode, StoredPage } from './types';
-import { useMappings } from './hooks/useMappings';
+import { BoundingBox, AppMode, StoredPage, AudioMapping } from './types';
 import { useAuth } from './hooks/useAuth';
 import { PageViewer } from './components/PageViewer';
 import { AudioModal } from './components/AudioModal';
 import { Toolbar } from './components/Toolbar';
 import { AdminLogin } from './components/AdminLogin';
-import { loadPages, savePages, updatePageBoxes } from './utils/storage';
+import { AdminMenu } from './components/AdminMenu';
+import { dbGetPages, dbSavePages, dbGetMappings, dbSaveMappings, migrateFromLocalStorage } from './utils/db';
+import { exportBundle, importBundle } from './utils/storage';
 import { pdfToDataUrls } from './utils/pdf';
 import './App.css';
 
 function pageId(dataUrl: string): string {
-  // Use a short hash of the data URL prefix as a stable page identifier
   let h = 5381;
   const sample = dataUrl.slice(0, 300);
   for (let i = 0; i < sample.length; i++) h = ((h << 5) + h) ^ sample.charCodeAt(i);
@@ -19,78 +19,97 @@ function pageId(dataUrl: string): string {
 }
 
 function App() {
-  const { mappings, assign } = useMappings();
   const { isAdmin, adminExists, loginAdmin, createAdmin, logout } = useAuth();
 
-  const [pages, setPages] = useState<StoredPage[]>(() => loadPages());
+  const [pages, setPages] = useState<StoredPage[]>([]);
+  const [mappings, setMappings] = useState<AudioMapping>({});
+  const [loading, setLoading] = useState(true);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [mode, setMode] = useState<AppMode>('play');
   const [pendingBox, setPendingBox] = useState<BoundingBox | null>(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [showAdminMenu, setShowAdminMenu] = useState(false);
   const [importing, setImporting] = useState<{ current: number; total: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
+  const pageFileRef = useRef<HTMLInputElement>(null);
+  const bundleFileRef = useRef<HTMLInputElement>(null);
   const currentPage = pages[currentIdx] ?? null;
 
-  // Sync admin mode changes to default mode
-  useEffect(() => {
-    if (!isAdmin) setMode('play');
-  }, [isAdmin]);
+  // ── Load from IndexedDB on mount ──────────────────────────────────────────
 
-  // ── Page management ───────────────────────────────────────────────────────
+  useEffect(() => {
+    migrateFromLocalStorage()
+      .then(() => Promise.all([dbGetPages(), dbGetMappings()]))
+      .then(([p, m]) => { setPages(p); setMappings(m); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { if (!isAdmin) setMode('play'); }, [isAdmin]);
 
   const goToPage = useCallback((idx: number) => {
     setCurrentIdx(Math.max(0, Math.min(pages.length - 1, idx)));
   }, [pages.length]);
 
+  // ── Page import (PDF / images) ────────────────────────────────────────────
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     e.target.value = '';
-
     const newPages: StoredPage[] = [];
 
     for (const file of files) {
       if (file.type === 'application/pdf') {
-        const dataUrls = await pdfToDataUrls(file, 1.5, (cur, tot) =>
+        const urls = await pdfToDataUrls(file, 1.5, (cur, tot) =>
           setImporting({ current: cur, total: tot })
         );
-        dataUrls.forEach((dataUrl, i) => {
-          const id = pageId(dataUrl);
-          // Preserve existing boxes if this page was imported before
+        urls.forEach((url, i) => {
+          const id = pageId(url);
           const existing = pages.find(p => p.id === id);
-          newPages.push({ id, dataUrl, name: `${file.name} p${i + 1}`, boxes: existing?.boxes ?? [] });
+          newPages.push({ id, dataUrl: url, name: `${file.name} p${i + 1}`, boxes: existing?.boxes ?? [] });
         });
       } else {
-        const dataUrl = await readFileAsDataUrl(file);
-        const id = pageId(dataUrl);
+        const url = await readFileAsDataUrl(file);
+        const id = pageId(url);
         const existing = pages.find(p => p.id === id);
-        newPages.push({ id, dataUrl, name: file.name, boxes: existing?.boxes ?? [] });
+        newPages.push({ id, dataUrl: url, name: file.name, boxes: existing?.boxes ?? [] });
       }
     }
 
     setImporting(null);
     setPages(prev => {
-      // Merge: replace existing by id, append new
       const map = new Map(prev.map(p => [p.id, p]));
       newPages.forEach(p => map.set(p.id, p));
       const next = Array.from(map.values());
-      savePages(next);
+      dbSavePages(next).catch(console.error);
       return next;
     });
     if (pages.length === 0) setCurrentIdx(0);
   };
+
+  // ── Page delete ───────────────────────────────────────────────────────────
+
+  const handleDeletePage = useCallback(() => {
+    if (!currentPage) return;
+    const deletedId = currentPage.id;
+    setPages(prev => {
+      const next = prev.filter(p => p.id !== deletedId);
+      dbSavePages(next).catch(console.error);
+      return next;
+    });
+    setCurrentIdx(i => Math.max(0, i - 1));
+  }, [currentPage]);
 
   // ── Box management ────────────────────────────────────────────────────────
 
   const handleBoxAdd = useCallback((box: BoundingBox) => {
     if (!currentPage) return;
     setPages(prev => {
-      const next = updatePageBoxes(prev, currentPage.id, [
-        ...prev.find(p => p.id === currentPage.id)!.boxes.filter(b => b.id !== box.id),
-        box,
-      ]);
+      const page = prev.find(p => p.id === currentPage.id)!;
+      const updated = { ...page, boxes: [...page.boxes.filter(b => b.id !== box.id), box] };
+      const next = prev.map(p => p.id === currentPage.id ? updated : p);
+      dbSavePages(next).catch(console.error);
       return next;
     });
     setPendingBox(box);
@@ -100,7 +119,10 @@ function App() {
     if (!currentPage) return;
     setPages(prev => {
       const page = prev.find(p => p.id === currentPage.id)!;
-      return updatePageBoxes(prev, currentPage.id, page.boxes.filter(b => b.id !== id));
+      const updated = { ...page, boxes: page.boxes.filter(b => b.id !== id) };
+      const next = prev.map(p => p.id === currentPage.id ? updated : p);
+      dbSavePages(next).catch(console.error);
+      return next;
     });
   }, [currentPage]);
 
@@ -109,11 +131,37 @@ function App() {
   }, []);
 
   const handleAssign = useCallback((dataUrl: string) => {
-    if (pendingBox) {
-      assign(pendingBox.id, dataUrl);
-      setPendingBox(null);
+    if (!pendingBox) return;
+    setMappings(prev => {
+      const next = { ...prev, [pendingBox.id]: dataUrl };
+      dbSaveMappings(next).catch(console.error);
+      return next;
+    });
+    setPendingBox(null);
+  }, [pendingBox]);
+
+  // ── Bundle export / import ────────────────────────────────────────────────
+
+  const handleExportBundle = useCallback(() => {
+    exportBundle(pages, mappings);
+  }, [pages, mappings]);
+
+  const handleBundleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const { pages: p, mappings: m } = await importBundle(file);
+      await dbSavePages(p);
+      await dbSaveMappings(m);
+      setPages(p);
+      setMappings(m);
+      setCurrentIdx(0);
+      setShowAdminMenu(false);
+    } catch {
+      setError('Could not load bundle — make sure it is a valid Iqra bundle file.');
     }
-  }, [pendingBox, assign]);
+  };
 
   // ── Auth ──────────────────────────────────────────────────────────────────
 
@@ -122,34 +170,56 @@ function App() {
     else setShowLogin(true);
   };
 
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="loadingScreen">
+        <div className="loadingSpinner" />
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <Toolbar
         currentPage={currentIdx + 1}
         totalPages={Math.max(pages.length, 1)}
         mode={mode}
-        mappings={mappings}
         isAdmin={isAdmin}
         onPrevPage={() => goToPage(currentIdx - 1)}
         onNextPage={() => goToPage(currentIdx + 1)}
         onSetMode={setMode}
-        onImportPage={() => fileInputRef.current?.click()}
+        onImportPage={() => pageFileRef.current?.click()}
+        onAdminMenu={() => setShowAdminMenu(true)}
         onAdminToggle={handleAdminToggle}
       />
 
       <input
-        ref={fileInputRef}
+        ref={pageFileRef}
         type="file"
         accept="image/*,application/pdf"
         multiple
         style={{ display: 'none' }}
         onChange={handleFileChange}
       />
+      <input
+        ref={bundleFileRef}
+        type="file"
+        accept=".json,application/json"
+        style={{ display: 'none' }}
+        onChange={handleBundleFileChange}
+      />
 
       <main className="main">
         {importing && (
           <div className="importProgress">
             Importing page {importing.current} of {importing.total}…
+          </div>
+        )}
+        {error && (
+          <div className="errorBanner" onClick={() => setError(null)}>
+            {error} <span className="errorDismiss">✕</span>
           </div>
         )}
 
@@ -165,7 +235,12 @@ function App() {
             onBoxDelete={handleBoxDelete}
           />
         ) : (
-          <EmptyState isAdmin={isAdmin} onImport={() => fileInputRef.current?.click()} onAdminLogin={() => setShowLogin(true)} />
+          <EmptyState
+            isAdmin={isAdmin}
+            onImport={() => pageFileRef.current?.click()}
+            onImportBundle={() => bundleFileRef.current?.click()}
+            onAdminLogin={() => setShowLogin(true)}
+          />
         )}
       </main>
 
@@ -185,12 +260,26 @@ function App() {
           onCancel={() => setShowLogin(false)}
         />
       )}
+
+      {showAdminMenu && (
+        <AdminMenu
+          hasPages={pages.length > 0}
+          hasContent={pages.length > 0 || Object.keys(mappings).length > 0}
+          onImportBundle={() => bundleFileRef.current?.click()}
+          onExportBundle={handleExportBundle}
+          onDeletePage={handleDeletePage}
+          onClose={() => setShowAdminMenu(false)}
+        />
+      )}
     </div>
   );
 }
 
-function EmptyState({ isAdmin, onImport, onAdminLogin }: {
-  isAdmin: boolean; onImport: () => void; onAdminLogin: () => void;
+function EmptyState({ isAdmin, onImport, onImportBundle, onAdminLogin }: {
+  isAdmin: boolean;
+  onImport: () => void;
+  onImportBundle: () => void;
+  onAdminLogin: () => void;
 }) {
   return (
     <div className="emptyState">
@@ -199,21 +288,24 @@ function EmptyState({ isAdmin, onImport, onAdminLogin }: {
 
       {isAdmin ? (
         <>
-          <p className="emptyDesc">Import the Iqra PDF or page images to get started.</p>
+          <p className="emptyDesc">Import the Iqra PDF or load a saved bundle to get started.</p>
           <button className="importBtn" onClick={onImport}>Import PDF / Images</button>
+          <button className="secondaryBtn" onClick={onImportBundle}>📥 Load Bundle</button>
           <div className="howItWorks">
             <h3>Admin setup</h3>
             <ol>
               <li>Import PDF or images <strong>(📄)</strong></li>
               <li>Use <strong>✒️ Draw</strong> — drag over each letter/word</li>
               <li>Record or upload audio for each box</li>
-              <li>Kids tap boxes in <strong>▶ Play</strong> mode to listen</li>
+              <li>Export bundle via <strong>⚙️</strong> to share with kids</li>
+              <li>Kids load the bundle and tap boxes to listen</li>
             </ol>
           </div>
         </>
       ) : (
         <>
-          <p className="emptyDesc">No pages loaded yet. Ask your teacher to set up the app.</p>
+          <p className="emptyDesc">Load a bundle from your teacher to start listening.</p>
+          <button className="importBtn" onClick={onImportBundle}>📥 Load Bundle</button>
           <button className="loginHintBtn" onClick={onAdminLogin}>🔐 Teacher login</button>
         </>
       )}
