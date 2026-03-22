@@ -63,7 +63,10 @@ export const PageViewer: React.FC<Props> = ({
   useEffect(() => {
     updateScale();
     window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
+    // ResizeObserver catches layout shifts on mobile (address bar, keyboard, orientation)
+    const ro = new ResizeObserver(updateScale);
+    if (imgRef.current) ro.observe(imgRef.current);
+    return () => { window.removeEventListener('resize', updateScale); ro.disconnect(); };
   }, [updateScale]);
 
   useEffect(() => {
@@ -181,7 +184,7 @@ export const PageViewer: React.FC<Props> = ({
           className={styles.pageImage} onLoad={handleImageLoad} draggable={false} />
         <canvas
           ref={overlayRef}
-          className={styles.overlay}
+          className={`${styles.overlay} ${mode === 'draw' ? styles.overlayDraw : ''}`}
           style={{ cursor }}
           onMouseMove={onMove}
           onMouseLeave={() => setHoveredId(null)}
