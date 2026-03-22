@@ -10,22 +10,23 @@ interface Props {
   mappings: AudioMapping;
   mode: AppMode;
   boxes: BoundingBox[];
+  isAdmin: boolean;
   onBoxClick: (box: BoundingBox) => void;
   onBoxAdd: (box: BoundingBox) => void;
+  onBoxDelete: (id: string) => void;
 }
 
 interface DrawState {
   active: boolean;
-  startX: number;
-  startY: number;
-  currentX: number;
-  currentY: number;
+  startX: number; startY: number;
+  currentX: number; currentY: number;
 }
 
 const EMPTY_DRAW: DrawState = { active: false, startX: 0, startY: 0, currentX: 0, currentY: 0 };
 
 export const PageViewer: React.FC<Props> = ({
-  imageSrc, mappings, mode, boxes, onBoxClick, onBoxAdd,
+  imageSrc, mappings, mode, boxes, isAdmin,
+  onBoxClick, onBoxAdd, onBoxDelete,
 }) => {
   const imgRef = useRef<HTMLImageElement>(null);
   const imageCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -53,11 +54,10 @@ export const PageViewer: React.FC<Props> = ({
     const img = imgRef.current;
     if (!img) return;
     setImgNatural({ w: img.naturalWidth, h: img.naturalHeight });
-    // render image to offscreen canvas so getBoxHash can sample pixels
-    const canvas = imageCanvasRef.current!;
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    canvas.getContext('2d')!.drawImage(img, 0, 0);
+    const c = imageCanvasRef.current!;
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    c.getContext('2d')!.drawImage(img, 0, 0);
   }, []);
 
   useEffect(() => {
@@ -66,35 +66,32 @@ export const PageViewer: React.FC<Props> = ({
     return () => window.removeEventListener('resize', updateScale);
   }, [updateScale]);
 
-  // Redraw overlay
   useEffect(() => {
     if (!overlayRef.current) return;
     const preview = draw.active
       ? { x: Math.min(draw.startX, draw.currentX), y: Math.min(draw.startY, draw.currentY),
           w: Math.abs(draw.currentX - draw.startX), h: Math.abs(draw.currentY - draw.startY) }
       : null;
-    drawBoxes(overlayRef.current, boxes, mappings, hoveredId, selectedId, scaleX, scaleY, preview);
-  }, [boxes, mappings, hoveredId, selectedId, scaleX, scaleY, draw]);
+    drawBoxes(overlayRef.current, boxes, mappings, hoveredId, selectedId, scaleX, scaleY, preview, mode === 'delete');
+  }, [boxes, mappings, hoveredId, selectedId, scaleX, scaleY, draw, mode]);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-
-  const toCanvasXY = useCallback((clientX: number, clientY: number) => {
+  const toXY = useCallback((clientX: number, clientY: number) => {
     const r = overlayRef.current?.getBoundingClientRect();
     if (!r) return { px: 0, py: 0 };
     return { px: clientX - r.left, py: clientY - r.top };
   }, []);
 
   const getBoxAt = useCallback((clientX: number, clientY: number): BoundingBox | null => {
-    const { px, py } = toCanvasXY(clientX, clientY);
+    const { px, py } = toXY(clientX, clientY);
     for (let i = boxes.length - 1; i >= 0; i--) {
       const b = boxes[i];
       if (px >= b.x * scaleX && px <= (b.x + b.w) * scaleX &&
           py >= b.y * scaleY && py <= (b.y + b.h) * scaleY) return b;
     }
     return null;
-  }, [boxes, scaleX, scaleY, toCanvasXY]);
+  }, [boxes, scaleX, scaleY, toXY]);
 
-  const clientOf = (e: React.MouseEvent | React.TouchEvent) => {
+  const xy = (e: React.MouseEvent | React.TouchEvent) => {
     if ('touches' in e) {
       const t = e.touches[0] ?? (e as React.TouchEvent).changedTouches[0];
       return { clientX: t.clientX, clientY: t.clientY };
@@ -102,29 +99,27 @@ export const PageViewer: React.FC<Props> = ({
     return { clientX: (e as React.MouseEvent).clientX, clientY: (e as React.MouseEvent).clientY };
   };
 
-  // ── Pointer handlers ──────────────────────────────────────────────────────
-
   const onDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (mode !== 'draw') return;
-    const { clientX, clientY } = clientOf(e);
-    const { px, py } = toCanvasXY(clientX, clientY);
+    const { clientX, clientY } = xy(e);
+    const { px, py } = toXY(clientX, clientY);
     setDraw({ active: true, startX: px, startY: py, currentX: px, currentY: py });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, toCanvasXY]);
+  }, [mode, toXY]);
 
   const onMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    const { clientX, clientY } = clientOf(e);
-    if (mode === 'draw') {
-      if (!draw.active) return;
-      const { px, py } = toCanvasXY(clientX, clientY);
+    const { clientX, clientY } = xy(e);
+    if (mode === 'draw' && draw.active) {
+      const { px, py } = toXY(clientX, clientY);
       setDraw(prev => ({ ...prev, currentX: px, currentY: py }));
     } else {
       setHoveredId(getBoxAt(clientX, clientY)?.id ?? null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, draw.active, toCanvasXY, getBoxAt]);
+  }, [mode, draw.active, toXY, getBoxAt]);
 
   const onUp = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    // Finish drawing a new box
     if (mode === 'draw' && draw.active) {
       setDraw(EMPTY_DRAW);
       const pw = Math.abs(draw.currentX - draw.startX);
@@ -148,22 +143,35 @@ export const PageViewer: React.FC<Props> = ({
       return;
     }
 
-    const { clientX, clientY } = clientOf(e);
+    const { clientX, clientY } = xy(e);
     const box = getBoxAt(clientX, clientY);
     if (!box) return;
+
+    if (mode === 'delete') {
+      onBoxDelete(box.id);
+      setHoveredId(null);
+      return;
+    }
+
     setSelectedId(box.id);
 
     if (mode === 'assign') {
       onBoxClick(box);
-    } else if (mode === 'play') {
+    } else {
+      // play mode
       if (mappings[box.id]) {
         playAudio(mappings[box.id]).catch(console.error);
-      } else {
-        onBoxClick(box);
+      } else if (isAdmin) {
+        onBoxClick(box); // admin can still assign from play mode
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, draw, scaleX, scaleY, getBoxAt, mappings, onBoxClick, onBoxAdd]);
+  }, [mode, draw, scaleX, scaleY, getBoxAt, mappings, onBoxClick, onBoxAdd, onBoxDelete, isAdmin]);
+
+  const cursor =
+    mode === 'draw' ? 'crosshair' :
+    mode === 'delete' ? 'not-allowed' :
+    'pointer';
 
   return (
     <div className={styles.container}>
@@ -174,7 +182,7 @@ export const PageViewer: React.FC<Props> = ({
         <canvas
           ref={overlayRef}
           className={styles.overlay}
-          style={{ cursor: mode === 'draw' ? 'crosshair' : 'pointer' }}
+          style={{ cursor }}
           onMouseMove={onMove}
           onMouseLeave={() => setHoveredId(null)}
           onMouseDown={onDown}
@@ -185,11 +193,12 @@ export const PageViewer: React.FC<Props> = ({
         />
       </div>
       <div className={styles.stats}>
-        {mode === 'draw'
-          ? 'Draw mode — drag to create a box'
+        {mode === 'draw' ? 'Drag to draw a box around a letter or word'
+          : mode === 'delete' ? 'Tap a box to delete it'
+          : mode === 'assign' ? 'Tap a box to assign audio'
           : boxes.length > 0
-          ? `${boxes.length} boxes · ${Object.keys(mappings).length} with audio`
-          : 'Switch to Draw mode to create boxes'}
+          ? `${boxes.length} boxes · ${Object.keys(mappings).length} with audio · tap to listen`
+          : isAdmin ? 'Switch to Draw mode to add boxes' : 'No boxes yet — ask your teacher to set up this page'}
       </div>
     </div>
   );

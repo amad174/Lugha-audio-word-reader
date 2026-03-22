@@ -3,17 +3,19 @@ export interface BoundingBox {
   y: number;
   w: number;
   h: number;
-  id: string; // hash of the cropped region
+  id: string;
 }
 
 export interface AudioMapping {
-  [hash: string]: string; // hash -> audio data URL or file path
+  [hash: string]: string;
 }
 
-export interface PageData {
-  pageNumber: number;
-  imageSrc: string;
+// Per-page data persisted to localStorage
+export interface StoredPage {
+  id: string;       // hash of image content
+  dataUrl: string;  // base64 image
+  name: string;
   boxes: BoundingBox[];
 }
 
-export type AppMode = 'play' | 'assign' | 'draw';
+export type AppMode = 'play' | 'assign' | 'draw' | 'delete';
