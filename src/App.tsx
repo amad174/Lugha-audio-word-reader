@@ -1,14 +1,27 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { BoundingBox, AppMode, StoredPage, AudioMapping } from './types';
+import { BoundingBox, AppMode, StoredPage, AudioMapping, UserProfile, GameConfig, GameLevel } from './types';
 import { useAuth } from './hooks/useAuth';
 import { PageViewer } from './components/PageViewer';
 import { AudioModal } from './components/AudioModal';
 import { Toolbar } from './components/Toolbar';
 import { AdminLogin } from './components/AdminLogin';
 import { AdminMenu } from './components/AdminMenu';
-import { dbGetPages, dbSavePages, dbGetMappings, dbSaveMappings, migrateFromLocalStorage } from './utils/db';
+import { ProfileSelect } from './components/ProfileSelect';
+import { PlayerHUD } from './components/PlayerHUD';
+import { LevelUpModal } from './components/LevelUpModal';
+import { AchievementToast } from './components/AchievementToast';
+import { GameSettings } from './components/GameSettings';
+import {
+  dbGetPages, dbSavePages, dbGetMappings, dbSaveMappings,
+  dbGetProfiles, dbSaveProfiles, dbGetGameConfig, dbSaveGameConfig,
+  migrateFromLocalStorage,
+} from './utils/db';
 import { exportBundle, importBundle } from './utils/storage';
 import { pdfToDataUrls } from './utils/pdf';
+import {
+  DEFAULT_GAME_CONFIG, getLevelForPoints, checkNewAchievements, ACHIEVEMENTS,
+} from './utils/game';
+import { Achievement } from './types';
 import './App.css';
 
 function pageId(dataUrl: string): string {
@@ -21,11 +34,23 @@ function pageId(dataUrl: string): string {
 function App() {
   const { isAdmin, adminExists, loginAdmin, createAdmin, logout } = useAuth();
 
+  // ── Core content ──────────────────────────────────────────────────────────
   const [pages, setPages] = useState<StoredPage[]>([]);
   const [mappings, setMappings] = useState<AudioMapping>({});
   const [loading, setLoading] = useState(true);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [mode, setMode] = useState<AppMode>('play');
+
+  // ── Game state ────────────────────────────────────────────────────────────
+  const [profiles, setProfiles] = useState<UserProfile[]>([]);
+  const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null);
+  const [gameConfig, setGameConfig] = useState<GameConfig>(DEFAULT_GAME_CONFIG);
+  const [showProfileSelect, setShowProfileSelect] = useState(false);
+  const [levelUpData, setLevelUpData] = useState<GameLevel | null>(null);
+  const [pendingAchievements, setPendingAchievements] = useState<Achievement[]>([]);
+  const [showGameSettings, setShowGameSettings] = useState(false);
+
+  // ── UI state ──────────────────────────────────────────────────────────────
   const [pendingBox, setPendingBox] = useState<BoundingBox | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [showAdminMenu, setShowAdminMenu] = useState(false);
@@ -40,9 +65,20 @@ function App() {
 
   useEffect(() => {
     migrateFromLocalStorage()
-      .then(() => Promise.all([dbGetPages(), dbGetMappings()]))
-      .then(([p, m]) => { setPages(p); setMappings(m); setLoading(false); })
+      .then(() => Promise.all([
+        dbGetPages(), dbGetMappings(), dbGetProfiles(), dbGetGameConfig(),
+      ]))
+      .then(([p, m, pr, gc]) => {
+        setPages(p);
+        setMappings(m);
+        setProfiles(pr);
+        setGameConfig(gc);
+        setLoading(false);
+        // Show profile select unless already admin
+        if (!isAdmin) setShowProfileSelect(true);
+      })
       .catch(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => { if (!isAdmin) setMode('play'); }, [isAdmin]);
@@ -50,6 +86,74 @@ function App() {
   const goToPage = useCallback((idx: number) => {
     setCurrentIdx(Math.max(0, Math.min(pages.length - 1, idx)));
   }, [pages.length]);
+
+  // ── Profile management ────────────────────────────────────────────────────
+
+  const handleSelectProfile = useCallback((profile: UserProfile) => {
+    setCurrentProfile(profile);
+    setShowProfileSelect(false);
+  }, []);
+
+  const handleCreateProfile = useCallback((profile: UserProfile) => {
+    setProfiles(prev => {
+      const next = [...prev, profile];
+      dbSaveProfiles(next).catch(console.error);
+      return next;
+    });
+    setCurrentProfile(profile);
+    setShowProfileSelect(false);
+  }, []);
+
+  const handleGuestPlay = useCallback(() => {
+    setCurrentProfile(null);
+    setShowProfileSelect(false);
+  }, []);
+
+  // ── Word heard — scoring ──────────────────────────────────────────────────
+
+  const handleWordHeard = useCallback((boxId: string) => {
+    if (!currentProfile) return;
+
+    const newWordsHeard = currentProfile.wordsHeard + 1;
+    const newPoints = currentProfile.totalPoints + gameConfig.pointsPerWord;
+    const oldLevel = getLevelForPoints(currentProfile.totalPoints, gameConfig.levels);
+    const newLevel = getLevelForPoints(newPoints, gameConfig.levels);
+    const newAchs = checkNewAchievements(newWordsHeard, currentProfile.achievements);
+
+    const updated: UserProfile = {
+      ...currentProfile,
+      wordsHeard: newWordsHeard,
+      totalPoints: newPoints,
+      level: newLevel.level,
+      achievements: [...currentProfile.achievements, ...newAchs.map(a => a.id)],
+    };
+
+    setCurrentProfile(updated);
+    setProfiles(prev => {
+      const next = prev.map(p => p.id === updated.id ? updated : p);
+      dbSaveProfiles(next).catch(console.error);
+      return next;
+    });
+
+    if (newLevel.level > oldLevel.level) {
+      setLevelUpData(newLevel);
+    } else if (newAchs.length > 0) {
+      setPendingAchievements(prev => [...prev, ...newAchs]);
+    }
+  }, [currentProfile, gameConfig]);
+
+  // ── Game settings ─────────────────────────────────────────────────────────
+
+  const handleSaveGameConfig = useCallback((cfg: GameConfig) => {
+    setGameConfig(cfg);
+    dbSaveGameConfig(cfg).catch(console.error);
+  }, []);
+
+  const handleResetProfiles = useCallback(() => {
+    setProfiles([]);
+    setCurrentProfile(null);
+    dbSaveProfiles([]).catch(console.error);
+  }, []);
 
   // ── Page import (PDF / images) ────────────────────────────────────────────
 
@@ -166,8 +270,14 @@ function App() {
   // ── Auth ──────────────────────────────────────────────────────────────────
 
   const handleAdminToggle = () => {
-    if (isAdmin) logout();
+    if (isAdmin) { logout(); setShowProfileSelect(true); }
     else setShowLogin(true);
+  };
+
+  const handleAdminLoginSuccess = () => {
+    setShowLogin(false);
+    setShowProfileSelect(false);
+    setCurrentProfile(null);
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -182,6 +292,18 @@ function App() {
 
   return (
     <div className="app">
+      {/* Profile select screen */}
+      {showProfileSelect && !isAdmin && (
+        <ProfileSelect
+          profiles={profiles}
+          gameConfig={gameConfig}
+          onSelect={handleSelectProfile}
+          onGuest={handleGuestPlay}
+          onAdminLogin={() => { setShowLogin(true); }}
+          onCreate={handleCreateProfile}
+        />
+      )}
+
       <Toolbar
         currentPage={currentIdx + 1}
         totalPages={Math.max(pages.length, 1)}
@@ -193,7 +315,17 @@ function App() {
         onImportPage={() => pageFileRef.current?.click()}
         onAdminMenu={() => setShowAdminMenu(true)}
         onAdminToggle={handleAdminToggle}
+        onSwitchProfile={() => setShowProfileSelect(true)}
+        currentProfile={currentProfile}
       />
+
+      {currentProfile && !isAdmin && (
+        <PlayerHUD
+          profile={currentProfile}
+          gameConfig={gameConfig}
+          onClick={() => setShowProfileSelect(true)}
+        />
+      )}
 
       <input
         ref={pageFileRef}
@@ -233,6 +365,8 @@ function App() {
             onBoxClick={handleBoxClick}
             onBoxAdd={handleBoxAdd}
             onBoxDelete={handleBoxDelete}
+            onWordHeard={handleWordHeard}
+            onSwipe={dir => goToPage(currentIdx + (dir === 'left' ? 1 : -1))}
           />
         ) : (
           <EmptyState
@@ -244,6 +378,7 @@ function App() {
         )}
       </main>
 
+      {/* Modals */}
       {pendingBox && (
         <AudioModal
           onAssign={handleAssign}
@@ -255,8 +390,12 @@ function App() {
       {showLogin && (
         <AdminLogin
           adminExists={adminExists}
-          onLogin={(pw) => { const ok = loginAdmin(pw); if (ok) setShowLogin(false); return ok; }}
-          onCreate={(pw) => { createAdmin(pw); setShowLogin(false); }}
+          onLogin={(pw) => {
+            const ok = loginAdmin(pw);
+            if (ok) handleAdminLoginSuccess();
+            return ok;
+          }}
+          onCreate={(pw) => { createAdmin(pw); handleAdminLoginSuccess(); }}
           onCancel={() => setShowLogin(false)}
         />
       )}
@@ -268,7 +407,41 @@ function App() {
           onImportBundle={() => bundleFileRef.current?.click()}
           onExportBundle={handleExportBundle}
           onDeletePage={handleDeletePage}
+          onGameSettings={() => setShowGameSettings(true)}
           onClose={() => setShowAdminMenu(false)}
+        />
+      )}
+
+      {showGameSettings && (
+        <GameSettings
+          gameConfig={gameConfig}
+          profiles={profiles}
+          onSave={handleSaveGameConfig}
+          onResetProfiles={handleResetProfiles}
+          onClose={() => setShowGameSettings(false)}
+        />
+      )}
+
+      {levelUpData && currentProfile && (
+        <LevelUpModal
+          newLevel={levelUpData}
+          profile={currentProfile}
+          gameConfig={gameConfig}
+          onContinue={() => {
+            setLevelUpData(null);
+            // Show queued achievements after level up dismisses
+            if (pendingAchievements.length > 0) {
+              const [first, ...rest] = pendingAchievements;
+              setPendingAchievements(rest);
+            }
+          }}
+        />
+      )}
+
+      {!levelUpData && pendingAchievements.length > 0 && (
+        <AchievementToast
+          achievement={pendingAchievements[0]}
+          onDismiss={() => setPendingAchievements(prev => prev.slice(1))}
         />
       )}
     </div>
@@ -284,8 +457,7 @@ function EmptyState({ isAdmin, onImport, onImportBundle, onAdminLogin }: {
   return (
     <div className="emptyState">
       <div className="emptyIcon">📖</div>
-      <h1 className="emptyTitle">Iqra Audio App</h1>
-
+      <h1 className="emptyTitle">Iqra Audio</h1>
       {isAdmin ? (
         <>
           <p className="emptyDesc">Import the Iqra PDF or load a saved bundle to get started.</p>
@@ -298,13 +470,13 @@ function EmptyState({ isAdmin, onImport, onImportBundle, onAdminLogin }: {
               <li>Use <strong>✒️ Draw</strong> — drag over each letter/word</li>
               <li>Record or upload audio for each box</li>
               <li>Export bundle via <strong>⚙️</strong> to share with kids</li>
-              <li>Kids load the bundle and tap boxes to listen</li>
+              <li>Kids load the bundle, sign in, and tap to listen</li>
             </ol>
           </div>
         </>
       ) : (
         <>
-          <p className="emptyDesc">Load a bundle from your teacher to start listening.</p>
+          <p className="emptyDesc">Load a bundle from your teacher to start learning.</p>
           <button className="importBtn" onClick={onImportBundle}>📥 Load Bundle</button>
           <button className="loginHintBtn" onClick={onAdminLogin}>🔐 Teacher login</button>
         </>

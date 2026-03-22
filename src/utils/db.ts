@@ -1,4 +1,5 @@
-import { StoredPage, AudioMapping } from '../types';
+import { StoredPage, AudioMapping, UserProfile, GameConfig } from '../types';
+import { DEFAULT_GAME_CONFIG } from './game';
 
 const DB_NAME = 'iqra_db';
 const DB_VERSION = 1;
@@ -34,12 +35,21 @@ async function kvSet(key: string, value: unknown): Promise<void> {
   });
 }
 
+// ── Content ───────────────────────────────────────────────────────────────────
 export const dbGetPages = () => kvGet<StoredPage[]>('pages', []);
 export const dbSavePages = (pages: StoredPage[]) => kvSet('pages', pages);
 export const dbGetMappings = () => kvGet<AudioMapping>('mappings', {});
 export const dbSaveMappings = (m: AudioMapping) => kvSet('mappings', m);
 
-/** One-time migration from localStorage → IndexedDB */
+// ── Profiles ──────────────────────────────────────────────────────────────────
+export const dbGetProfiles = () => kvGet<UserProfile[]>('profiles', []);
+export const dbSaveProfiles = (profiles: UserProfile[]) => kvSet('profiles', profiles);
+
+// ── Game config ───────────────────────────────────────────────────────────────
+export const dbGetGameConfig = () => kvGet<GameConfig>('gameConfig', DEFAULT_GAME_CONFIG);
+export const dbSaveGameConfig = (cfg: GameConfig) => kvSet('gameConfig', cfg);
+
+// ── Migration from localStorage ───────────────────────────────────────────────
 export async function migrateFromLocalStorage(): Promise<void> {
   try {
     const existing = await dbGetPages();
@@ -48,7 +58,6 @@ export async function migrateFromLocalStorage(): Promise<void> {
     const lsMappings = JSON.parse(localStorage.getItem('iqra_mappings') || '{}');
     if (lsPages.length > 0) await dbSavePages(lsPages);
     if (Object.keys(lsMappings).length > 0) await dbSaveMappings(lsMappings);
-    // Clean up old localStorage entries
     localStorage.removeItem('iqra_pages');
     localStorage.removeItem('iqra_mappings');
   } catch { /* ignore */ }

@@ -7,11 +7,12 @@ interface Props {
   onImportBundle: () => void;
   onExportBundle: () => void;
   onDeletePage: () => void;
+  onGameSettings: () => void;
   onClose: () => void;
 }
 
 export const AdminMenu: React.FC<Props> = ({
-  hasPages, hasContent, onImportBundle, onExportBundle, onDeletePage, onClose,
+  hasPages, hasContent, onImportBundle, onExportBundle, onDeletePage, onGameSettings, onClose,
 }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -20,6 +21,16 @@ export const AdminMenu: React.FC<Props> = ({
       <div className={styles.sheet} onClick={e => e.stopPropagation()}>
         <div className={styles.handle} />
         <h3 className={styles.title}>Admin Actions</h3>
+
+        <button className={styles.menuBtn} onClick={() => { onGameSettings(); onClose(); }}>
+          <span className={styles.menuIcon}>🎮</span>
+          <div>
+            <div className={styles.menuLabel}>Game Settings</div>
+            <div className={styles.menuDesc}>Configure levels, points, and view players</div>
+          </div>
+        </button>
+
+        <div className={styles.divider} />
 
         <button className={styles.menuBtn} onClick={() => { onImportBundle(); onClose(); }}>
           <span className={styles.menuIcon}>📥</span>
