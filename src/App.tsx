@@ -74,6 +74,7 @@ function App() {
         setProfiles(pr);
         setGameConfig(gc);
         setLoading(false);
+        if (p.length > 0) setShowProfileSelect(true);
       })
       .catch(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -133,10 +134,11 @@ function App() {
       return next;
     });
 
+    if (newAchs.length > 0) {
+      setPendingAchievements(prev => [...prev, ...newAchs]);
+    }
     if (newLevel.level > oldLevel.level) {
       setLevelUpData(newLevel);
-    } else if (newAchs.length > 0) {
-      setPendingAchievements(prev => [...prev, ...newAchs]);
     }
   }, [currentProfile, gameConfig]);
 
@@ -260,6 +262,7 @@ function App() {
       setMappings(m);
       setCurrentIdx(0);
       setShowAdminMenu(false);
+      if (!isAdmin) setShowProfileSelect(true);
     } catch {
       setError('Could not load bundle — make sure it is a valid Iqra bundle file.');
     }
@@ -425,14 +428,7 @@ function App() {
           newLevel={levelUpData}
           profile={currentProfile}
           gameConfig={gameConfig}
-          onContinue={() => {
-            setLevelUpData(null);
-            // Show queued achievements after level up dismisses
-            if (pendingAchievements.length > 0) {
-              const [, ...rest] = pendingAchievements;
-              setPendingAchievements(rest);
-            }
-          }}
+          onContinue={() => setLevelUpData(null)}
         />
       )}
 
