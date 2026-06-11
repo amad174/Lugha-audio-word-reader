@@ -6,6 +6,7 @@ import {
   listAll,
 } from 'firebase/storage';
 import { auth, storage } from '../firebase/config';
+import { syncAuthClaims } from './authService';
 
 function dataUrlToBlob(dataUrl: string): Blob {
   const [header, encoded] = dataUrl.split(',');
@@ -19,7 +20,7 @@ function dataUrlToBlob(dataUrl: string): Blob {
 
 async function ensureAuthToken(): Promise<void> {
   if (auth.currentUser) {
-    await auth.currentUser.getIdToken(true);
+    await syncAuthClaims();
   }
 }
 

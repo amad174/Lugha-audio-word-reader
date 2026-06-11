@@ -20,6 +20,10 @@ service firebase.storage {
     function isTeacher(orgId) {
       return isSignedIn() && (
         (request.auth.token.role == 'teacher' && request.auth.token.orgId == orgId) ||
+        (
+          firestore.exists(/databases/(default)/documents/orgs/$(orgId)/members/$(request.auth.uid)) &&
+          firestore.get(/databases/(default)/documents/orgs/$(orgId)/members/$(request.auth.uid)).data.role == 'teacher'
+        ) ||
         (userDoc() != null && userDoc().role == 'teacher' && userDoc().orgId == orgId)
       );
     }

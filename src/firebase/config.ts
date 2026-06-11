@@ -53,7 +53,7 @@ export const db: Firestore = useEmulators
       localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
     });
 export const storage: FirebaseStorage = getStorage(app);
-export const functions: Functions = getFunctions(app);
+export const functions: Functions = getFunctions(app, 'us-central1');
 
 let emulatorsConnected = false;
 

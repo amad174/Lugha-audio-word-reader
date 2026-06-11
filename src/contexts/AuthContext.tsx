@@ -9,7 +9,7 @@ import React, {
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { AppUser, Organization } from '../types';
-import { mapFirebaseUser, logOut, getOrganization } from '../services/authService';
+import { mapFirebaseUser, logOut, getOrganization, syncAuthClaims } from '../services/authService';
 
 interface AuthContextValue {
   user: AppUser | null;
@@ -54,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       try {
+        await syncAuthClaims();
         const appUser = await mapFirebaseUser(fbUser);
         setUser(appUser);
         if (appUser?.orgId) await loadOrg(appUser.orgId);

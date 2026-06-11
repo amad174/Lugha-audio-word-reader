@@ -20,6 +20,18 @@ import { auth, db, functions } from '../firebase/config';
 import { AppUser, UserRole } from '../types';
 import { generateInviteCode, slugifyId } from '../utils/validation';
 
+/** Sync orgId/role custom claims onto the ID token (required for Storage rules). */
+export async function syncAuthClaims(): Promise<void> {
+  if (!auth.currentUser) return;
+  try {
+    const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
+    await refreshClaims({});
+    await auth.currentUser.getIdToken(true);
+  } catch {
+    // Function may be unavailable; storage rules fall back to Firestore lookups
+  }
+}
+
 export async function mapFirebaseUser(fbUser: FirebaseUser): Promise<AppUser | null> {
   const snap = await getDoc(doc(db, 'users', fbUser.uid));
   if (!snap.exists()) return null;
@@ -74,13 +86,7 @@ export async function signUpTeacher(
 
   await batch.commit();
 
-  try {
-    const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
-    await refreshClaims({});
-    await auth.currentUser?.getIdToken(true);
-  } catch {
-    // Functions may not be deployed; rules fall back to Firestore user doc
-  }
+  await syncAuthClaims();
 
   return {
     uid: cred.user.uid,
@@ -141,13 +147,7 @@ export async function signUpStudent(
 
   await batch.commit();
 
-  try {
-    const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
-    await refreshClaims({});
-    await auth.currentUser?.getIdToken(true);
-  } catch {
-    // ignore
-  }
+  await syncAuthClaims();
 
   return {
     uid: cred.user.uid,
@@ -161,6 +161,7 @@ export async function signUpStudent(
 
 export async function signIn(email: string, password: string): Promise<AppUser> {
   const cred = await signInWithEmailAndPassword(auth, email, password);
+  await syncAuthClaims();
   const user = await mapFirebaseUser(cred.user);
   if (!user) throw new Error('User profile not found.');
   return user;

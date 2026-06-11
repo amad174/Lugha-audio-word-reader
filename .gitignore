@@ -26,3 +26,4 @@ yarn-error.log*
 firestore-debug.log
 firebase-debug.log
 functions/node_modules
+.vercel
