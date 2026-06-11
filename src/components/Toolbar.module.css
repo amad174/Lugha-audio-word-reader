@@ -10,48 +10,96 @@
   flex-shrink: 0;
 }
 
-.row {
+.readerToolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding-top: calc(var(--space-xs) + var(--safe-top));
+  box-shadow: 0 1px 0 var(--color-muted);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bookTitle {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font: var(--text-label-md);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.titleActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.controlsRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-xs);
-  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.actionsRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .navGroup {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
 }
 
-.navBtn {
-  min-width: 40px !important;
-  min-height: 40px !important;
+.touchBtn {
+  min-width: 44px !important;
+  min-height: 44px !important;
 }
 
 .pageLabel {
-  font: var(--text-label-sm);
+  font: var(--text-label-md);
   color: var(--color-on-surface);
-  min-width: 52px;
+  min-width: 56px;
   text-align: center;
 }
 
 .modeGroup {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
   border: 1px solid var(--color-muted);
   border-radius: var(--radius-full);
   padding: 4px;
   background: var(--color-neutral);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  max-width: 100%;
+}
+
+.modeGroup::-webkit-scrollbar {
+  display: none;
 }
 
 .modeBtn {
-  min-height: 36px !important;
-  min-width: auto !important;
+  min-height: 44px !important;
+  min-width: 44px !important;
   padding: 0 12px !important;
   border-radius: var(--radius-full) !important;
   gap: 6px !important;
+  flex-shrink: 0;
 }
 
 .modeBtnLabel {
@@ -62,12 +110,11 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
 }
 
 .profileBtn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-full);
   border: 2px solid var(--color-primary);
   background: var(--color-neutral);
@@ -80,27 +127,17 @@
   line-height: 1;
 }
 
-.profileBtn:hover {
-  transform: scale(1.05);
+.profileBtn:active {
+  transform: scale(0.96);
 }
 
 .adminActive {
   border-color: var(--color-primary) !important;
 }
 
-@media (max-width: 430px) {
+@media (max-width: 640px) {
   .toolbar {
-    padding: var(--space-xs) 12px;
-  }
-
-  .row:first-child {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .row:last-child {
-    width: 100%;
-    justify-content: center;
+    gap: 6px;
   }
 
   .modeBtnLabel {
@@ -108,6 +145,22 @@
   }
 
   .modeBtn {
-    padding: 0 10px !important;
+    padding: 0 !important;
+    width: 44px;
+  }
+
+  .controlsRow {
+    flex-wrap: nowrap;
+  }
+
+  .modeGroup {
+    flex: 1;
+    justify-content: flex-start;
+  }
+}
+
+@media (hover: none) {
+  .profileBtn:hover {
+    transform: none;
   }
 }

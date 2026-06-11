@@ -41,7 +41,7 @@ describe('pageCoords', () => {
     });
   });
 
-  test('hitTestBox finds topmost box', () => {
+  test('hitTestBox finds topmost box with tap slop', () => {
     const metrics = {
       naturalWidth: 100,
       naturalHeight: 100,
@@ -56,6 +56,7 @@ describe('pageCoords', () => {
     ];
 
     expect(hitTestBox(15, 15, boxes, metrics)?.id).toBe('b');
+    expect(hitTestBox(60, 60, boxes, metrics, 12)?.id).toBe('a');
     expect(hitTestBox(60, 60, boxes, metrics)).toBeNull();
   });
 });

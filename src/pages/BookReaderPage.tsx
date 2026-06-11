@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Settings, Upload } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { useAuthContext } from '../contexts/AuthContext';
 import { PageViewer } from '../components/PageViewer';
 import { AudioModal } from '../components/AudioModal';
@@ -189,19 +189,10 @@ export function BookReaderPage() {
 
   return (
     <div className="app">
-      <header style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--color-surface)', borderBottom: '1px solid var(--color-muted)' }}>
-        <Button variant="icon" size="sm" onClick={() => navigate('/library')} aria-label="Back to library">
-          <ArrowLeft size={18} />
-        </Button>
-        <span style={{ font: 'var(--text-label-md)', flex: 1 }}>{bookTitle}</span>
-        {isTeacher && (
-          <Button variant="icon" size="sm" onClick={() => navigate(`/library/${bookId}/edit`)} aria-label="Book settings">
-            <Settings size={18} />
-          </Button>
-        )}
-      </header>
-
       <Toolbar
+        bookTitle={bookTitle}
+        onBack={() => navigate('/library')}
+        onBookSettings={isTeacher ? () => navigate(`/library/${bookId}/edit`) : undefined}
         currentPage={pages.length ? currentIdx + 1 : 0}
         totalPages={pages.length}
         mode={mode}

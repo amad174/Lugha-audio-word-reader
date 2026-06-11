@@ -2,8 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { FileUp, Mic, Square, Play, Upload } from 'lucide-react';
 import { readAudioFile, recordAudio, playAudio } from '../utils/audio';
 import { Modal } from './ui/Modal';
+import { Sheet } from './ui/Sheet';
 import { Button } from './ui/Button';
 import { Tabs, TabItem } from './ui/Tabs';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import styles from './AudioModal.module.css';
 
 interface Props {
@@ -13,6 +15,7 @@ interface Props {
 }
 
 export const AudioModal: React.FC<Props> = ({ onAssign, onCancel, existingAudio }) => {
+  const isMobile = useMediaQuery('(max-width: 640px)');
   const [tab, setTab] = useState<'file' | 'record'>('file');
   const [recording, setRecording] = useState(false);
   const [preview, setPreview] = useState<string | null>(existingAudio ?? null);
@@ -115,8 +118,8 @@ export const AudioModal: React.FC<Props> = ({ onAssign, onCancel, existingAudio 
     },
   ];
 
-  return (
-    <Modal open title="Assign audio" onClose={onCancel}>
+  const body = (
+    <>
       <Tabs items={tabItems} value={tab} onChange={(id) => setTab(id as 'file' | 'record')} className={styles.tabs} />
 
       {preview && (
@@ -131,13 +134,27 @@ export const AudioModal: React.FC<Props> = ({ onAssign, onCancel, existingAudio 
 
       {error && <p className={styles.error} role="alert">{error}</p>}
 
-      <div className={styles.actions}>
-        <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-        <Button onClick={handleAssign} disabled={!preview}>
+      <div className={`${styles.actions} ${isMobile ? styles.actionsMobile : ''}`}>
+        <Button variant="secondary" onClick={onCancel} fullWidth={isMobile}>Cancel</Button>
+        <Button onClick={handleAssign} disabled={!preview} fullWidth={isMobile}>
           <Upload size={18} aria-hidden />
           Assign
         </Button>
       </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open title="Assign audio" onClose={onCancel}>
+        {body}
+      </Sheet>
+    );
+  }
+
+  return (
+    <Modal open title="Assign audio" onClose={onCancel}>
+      {body}
     </Modal>
   );
 };

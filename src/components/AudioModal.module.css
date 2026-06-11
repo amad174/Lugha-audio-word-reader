@@ -51,3 +51,8 @@
   padding-top: var(--space-sm);
   border-top: 1px solid var(--color-muted);
 }
+
+.actionsMobile {
+  flex-direction: column-reverse;
+  justify-content: stretch;
+}

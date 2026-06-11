@@ -10,6 +10,7 @@ import {
   hitTestBox,
   PageMetrics,
 } from '../utils/pageCoords';
+import { useCoarsePointer } from '../hooks/useMediaQuery';
 import styles from './PageViewer.module.css';
 
 interface Props {
@@ -61,6 +62,9 @@ export const PageViewer: React.FC<Props> = ({
   const [metrics, setMetrics] = useState<PageMetrics | null>(null);
   const [draw, setDraw] = useState<DrawState>(EMPTY_DRAW);
   const [imageReady, setImageReady] = useState(false);
+  const isCoarsePointer = useCoarsePointer();
+  const tapSlop = isCoarsePointer ? 14 : 4;
+  const minDrawSize = isCoarsePointer ? 12 : 8;
 
   const refreshLayout = useCallback(() => {
     const img = imgRef.current;
@@ -129,7 +133,7 @@ export const PageViewer: React.FC<Props> = ({
 
     const pw = Math.abs(state.currentX - state.startX);
     const ph = Math.abs(state.currentY - state.startY);
-    if (pw < 8 || ph < 8) return;
+    if (pw < minDrawSize || ph < minDrawSize) return;
 
     const x0 = Math.min(state.startX, state.currentX);
     const y0 = Math.min(state.startY, state.currentY);
@@ -147,7 +151,7 @@ export const PageViewer: React.FC<Props> = ({
     const newBox: BoundingBox = { x, y, w, h, id };
     setSelectedId(id);
     onBoxAdd(newBox);
-  }, [onBoxAdd]);
+  }, [onBoxAdd, minDrawSize]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     const img = imgRef.current;
@@ -185,9 +189,9 @@ export const PageViewer: React.FC<Props> = ({
       return;
     }
 
-    const box = hitTestBox(px, py, boxes, m);
+    const box = hitTestBox(px, py, boxes, m, tapSlop);
     setHoveredId(box?.id ?? null);
-  }, [mode, draw.active, boxes]);
+  }, [mode, draw.active, boxes, tapSlop]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     const img = imgRef.current;
@@ -219,7 +223,7 @@ export const PageViewer: React.FC<Props> = ({
     }
 
     const { px, py } = clientToDisplay(e.clientX, e.clientY, img);
-    const box = hitTestBox(px, py, boxes, m);
+    const box = hitTestBox(px, py, boxes, m, tapSlop);
     if (!box) return;
 
     if (mode === 'delete') {
@@ -239,7 +243,7 @@ export const PageViewer: React.FC<Props> = ({
     } else if (isAdmin) {
       onBoxClick(box);
     }
-  }, [mode, draw, boxes, mappings, onBoxClick, onBoxDelete, isAdmin, onWordHeard, onSwipe, finishDraw]);
+  }, [mode, draw, boxes, mappings, onBoxClick, onBoxDelete, isAdmin, onWordHeard, onSwipe, finishDraw, tapSlop]);
 
   const handlePointerCancel = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (pointerIdRef.current === e.pointerId) {
@@ -254,6 +258,9 @@ export const PageViewer: React.FC<Props> = ({
     mode === 'draw' ? 'crosshair' :
     mode === 'delete' ? 'not-allowed' :
     'pointer';
+
+  const interactionModeClass =
+    mode === 'draw' || mode === 'delete' ? styles.interactionDraw : styles.interactionPan;
 
   return (
     <div className={styles.container}>
@@ -270,7 +277,7 @@ export const PageViewer: React.FC<Props> = ({
         <canvas ref={overlayRef} className={styles.overlay} aria-hidden />
         <div
           ref={layerRef}
-          className={`${styles.interactionLayer} ${mode === 'draw' ? styles.overlayDraw : ''}`}
+          className={`${styles.interactionLayer} ${interactionModeClass} ${mode === 'draw' ? styles.overlayDraw : ''}`}
           style={{ cursor }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}

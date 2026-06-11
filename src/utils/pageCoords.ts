@@ -53,14 +53,15 @@ export function hitTestBox(
   px: number,
   py: number,
   boxes: BoundingBox[],
-  metrics: PageMetrics
+  metrics: PageMetrics,
+  slop = 0
 ): BoundingBox | null {
   for (let i = boxes.length - 1; i >= 0; i--) {
     const b = boxes[i];
-    const left = b.x * metrics.scaleX;
-    const top = b.y * metrics.scaleY;
-    const right = (b.x + b.w) * metrics.scaleX;
-    const bottom = (b.y + b.h) * metrics.scaleY;
+    const left = b.x * metrics.scaleX - slop;
+    const top = b.y * metrics.scaleY - slop;
+    const right = (b.x + b.w) * metrics.scaleX + slop;
+    const bottom = (b.y + b.h) * metrics.scaleY + slop;
     if (px >= left && px <= right && py >= top && py <= bottom) return b;
   }
   return null;

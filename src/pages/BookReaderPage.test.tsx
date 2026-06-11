@@ -37,8 +37,11 @@ jest.mock('../components/PageViewer', () => ({
 }));
 
 jest.mock('../components/Toolbar', () => ({
-  Toolbar: ({ onImportPage }: { onImportPage: () => void }) => (
-    <button type="button" onClick={onImportPage}>Import pages</button>
+  Toolbar: ({ onImportPage, bookTitle }: { onImportPage: () => void; bookTitle?: string }) => (
+    <div>
+      {bookTitle ? <h1>{bookTitle}</h1> : null}
+      <button type="button" onClick={onImportPage}>Import pages</button>
+    </div>
   ),
 }));
 

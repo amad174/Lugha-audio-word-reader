@@ -33,6 +33,13 @@
 .interactionLayer {
   position: absolute;
   inset: 0;
+}
+
+.interactionPan {
+  touch-action: pan-y pinch-zoom;
+}
+
+.interactionDraw {
   touch-action: none;
 }
 
@@ -52,14 +59,28 @@
   width: 100%;
   max-width: 900px;
   margin-top: var(--space-xs);
-  padding: 10px var(--space-sm);
-  font: var(--text-overline);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  padding: 12px var(--space-sm);
+  font: var(--text-body-sm);
   color: var(--color-on-surface);
-  opacity: 0.7;
+  opacity: 0.85;
   text-align: center;
   background: var(--color-surface);
   border: 1px solid var(--color-muted);
   border-radius: var(--radius-md);
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 4px;
+  }
+
+  .stats {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin-top: 4px;
+    padding-bottom: calc(12px + var(--safe-bottom));
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    box-shadow: 0 -4px 16px rgba(23, 23, 23, 0.06);
+  }
 }

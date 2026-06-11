@@ -44,3 +44,16 @@
   --safe-right: env(safe-area-inset-right, 0px);
   --transition-fast: 150ms ease;
 }
+
+@media (max-width: 640px) {
+  :root {
+    --gutter: 16px;
+    --space-sm: 16px;
+    --space-md: 24px;
+    --space-lg: 32px;
+    --section: 48px;
+    --text-headline-lg: 400 32px/38px var(--font-display);
+    --text-headline-sm: 400 24px/30px var(--font-body);
+    --text-body-md: 400 16px/24px var(--font-body);
+  }
+}

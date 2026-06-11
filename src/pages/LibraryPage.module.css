@@ -1,9 +1,13 @@
 .library {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--color-neutral);
   padding: var(--space-sm);
   padding-top: calc(var(--safe-top) + var(--space-sm));
+  padding-left: max(var(--space-sm), var(--safe-left));
+  padding-right: max(var(--space-sm), var(--safe-right));
+  padding-bottom: calc(var(--space-sm) + var(--safe-bottom));
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .header {
@@ -60,7 +64,7 @@
   padding: 12px;
   cursor: pointer;
   text-align: left;
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .bookCard:hover {
@@ -200,10 +204,56 @@
   display: block;
 }
 
-.pageThumbLabel {
-  display: block;
-  padding: 6px 8px;
-  font: var(--text-label-sm);
-  color: #6b7280;
-  text-align: center;
+.bookCard:active {
+  border-color: var(--color-primary);
+  transform: scale(0.98);
+}
+
+@media (max-width: 640px) {
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-xs);
+  }
+
+  .headerActions {
+    width: 100%;
+  }
+
+  .headerActions > * {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .studentHud {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .bar {
+    width: 100%;
+  }
+
+  .bookGrid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+
+  .modalActions {
+    flex-direction: column-reverse;
+  }
+
+  .modalActions > * {
+    width: 100%;
+  }
+}
+
+@media (hover: none) {
+  .bookCard:hover {
+    border-color: var(--color-muted);
+  }
+
+  .bookCard:active {
+    border-color: var(--color-primary);
+  }
 }

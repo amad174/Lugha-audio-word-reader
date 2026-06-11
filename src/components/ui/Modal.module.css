@@ -66,3 +66,22 @@
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+
+@media (max-width: 640px) {
+  .scrim {
+    padding: var(--space-sm);
+    padding-top: calc(var(--space-sm) + var(--safe-top));
+    padding-bottom: calc(var(--space-sm) + var(--safe-bottom));
+    align-items: flex-end;
+  }
+
+  .panel {
+    max-height: min(92dvh, 720px);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  .close {
+    width: 44px;
+    height: 44px;
+  }
+}

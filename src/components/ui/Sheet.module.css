@@ -10,7 +10,7 @@
 
 .panel {
   width: 100%;
-  max-height: 92vh;
+  max-height: min(92dvh, 720px);
   overflow: auto;
   background-color: var(--color-surface);
   border: 1px solid var(--color-muted);
@@ -59,8 +59,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 1px solid var(--color-muted);
   border-radius: var(--radius-full);

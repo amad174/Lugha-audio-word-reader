@@ -13,4 +13,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: var(--color-neutral);
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
 }

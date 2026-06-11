@@ -23,7 +23,7 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "theme_color": "#20614c",
   "background_color": "#fafafa",
   "categories": ["education", "kids"]
