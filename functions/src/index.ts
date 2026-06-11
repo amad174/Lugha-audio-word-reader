@@ -1,21 +1,19 @@
 import { randomUUID } from 'crypto';
+import * as admin from 'firebase-admin';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getStorage } from 'firebase-admin/storage';
 
 const BUCKET = 'lughaapp.firebasestorage.app';
 
-function ensureAdmin() {
-  if (getApps().length === 0) {
-    initializeApp({ storageBucket: BUCKET });
-  }
+if (!admin.apps.length) {
+  admin.initializeApp({ storageBucket: BUCKET });
 }
 
+const db = admin.firestore();
+const auth = admin.auth();
+const bucket = admin.storage().bucket(BUCKET);
+
 async function requireTeacher(uid: string, orgId: string): Promise<void> {
-  ensureAdmin();
-  const userSnap = await getFirestore().doc(`users/${uid}`).get();
+  const userSnap = await db.doc(`users/${uid}`).get();
   if (!userSnap.exists) {
     throw new HttpsError('permission-denied', 'User profile not found.');
   }
@@ -31,53 +29,59 @@ function orgIdFromPath(path: string): string | null {
 }
 
 async function setClaimsFromUserDoc(uid: string): Promise<{ orgId: string; role: string } | null> {
-  ensureAdmin();
-  const userSnap = await getFirestore().doc(`users/${uid}`).get();
+  const userSnap = await db.doc(`users/${uid}`).get();
   if (!userSnap.exists) return null;
 
   const { orgId, role } = userSnap.data() as { orgId: string; role: string };
-  await getAuth().setCustomUserClaims(uid, { orgId, role });
+  await auth.setCustomUserClaims(uid, { orgId, role });
   return { orgId, role };
 }
 
 /** Upload a file to Storage using Admin SDK (bypasses client Storage rules). */
-export const uploadStorageFile = onCall({ invoker: 'public' }, async (request) => {
-  if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'Sign in required.');
+export const uploadStorageFile = onCall(
+  { invoker: 'public', memory: '512MiB', timeoutSeconds: 120 },
+  async (request) => {
+    try {
+      if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Sign in required.');
+      }
+
+      const { path, contentType, dataBase64 } = request.data as {
+        path: string;
+        contentType: string;
+        dataBase64: string;
+      };
+
+      if (!path || !dataBase64 || typeof path !== 'string' || typeof dataBase64 !== 'string') {
+        throw new HttpsError('invalid-argument', 'path and dataBase64 are required.');
+      }
+
+      const orgId = orgIdFromPath(path);
+      if (!orgId) {
+        throw new HttpsError('invalid-argument', 'Invalid storage path.');
+      }
+
+      await requireTeacher(request.auth.uid, orgId);
+
+      const token = randomUUID();
+      const buffer = Buffer.from(dataBase64, 'base64');
+      const file = bucket.file(path);
+      await file.save(buffer, {
+        metadata: {
+          contentType: contentType || 'application/octet-stream',
+          metadata: { firebaseStorageDownloadTokens: token },
+        },
+      });
+
+      const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
+      return { downloadUrl };
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      console.error('uploadStorageFile failed', err);
+      throw new HttpsError('internal', 'Upload failed on server.');
+    }
   }
-
-  const { path, contentType, dataBase64 } = request.data as {
-    path: string;
-    contentType: string;
-    dataBase64: string;
-  };
-
-  if (!path || !dataBase64 || typeof path !== 'string' || typeof dataBase64 !== 'string') {
-    throw new HttpsError('invalid-argument', 'path and dataBase64 are required.');
-  }
-
-  const orgId = orgIdFromPath(path);
-  if (!orgId) {
-    throw new HttpsError('invalid-argument', 'Invalid storage path.');
-  }
-
-  await requireTeacher(request.auth.uid, orgId);
-
-  const token = randomUUID();
-  const buffer = Buffer.from(dataBase64, 'base64');
-
-  ensureAdmin();
-  const file = getStorage().bucket(BUCKET).file(path);
-  await file.save(buffer, {
-    metadata: {
-      contentType: contentType || 'application/octet-stream',
-      metadata: { firebaseStorageDownloadTokens: token },
-    },
-  });
-
-  const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
-  return { downloadUrl };
-});
+);
 
 export const refreshUserClaims = onCall({ invoker: 'public' }, async (request) => {
   if (!request.auth) {

@@ -53,6 +53,9 @@ function formatUploadError(err: unknown): never {
     if (code === 'functions/unauthenticated') {
       throw new Error('Sign in required to upload files.');
     }
+    if (code === 'functions/internal') {
+      throw new Error('Upload failed on server. Please try again in a moment.');
+    }
   }
   if (err instanceof Error && err.message && err.message !== 'internal') {
     throw err;
