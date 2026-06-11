@@ -54,7 +54,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       try {
-        await syncAuthClaims();
+        try {
+          await syncAuthClaims();
+        } catch (err) {
+          console.warn('Could not sync auth claims on load', err);
+        }
         const appUser = await mapFirebaseUser(fbUser);
         setUser(appUser);
         if (appUser?.orgId) await loadOrg(appUser.orgId);

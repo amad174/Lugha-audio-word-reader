@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "lughaapp"
-  }
+  },
+  "targets": {
+    "lughaapp": {
+      "storage": {
+        "app": [
+          "lughaapp.firebasestorage.app"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

@@ -33,8 +33,9 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.refreshUserClaims = void 0;
+exports.refreshUserClaims = exports.syncClaimsOnUserWrite = void 0;
 const https_1 = require("firebase-functions/v2/https");
+const firestore_1 = require("firebase-functions/v2/firestore");
 const admin = __importStar(require("firebase-admin"));
 function getAdmin() {
     if (admin.apps.length === 0) {
@@ -44,17 +45,33 @@ function getAdmin() {
     }
     return admin.app();
 }
+async function setClaimsFromUserDoc(uid) {
+    const userSnap = await getAdmin().firestore().doc(`users/${uid}`).get();
+    if (!userSnap.exists)
+        return null;
+    const { orgId, role } = userSnap.data();
+    await getAdmin().auth().setCustomUserClaims(uid, { orgId, role });
+    return { orgId, role };
+}
+/** Keeps auth custom claims in sync whenever a user profile is written. */
+exports.syncClaimsOnUserWrite = (0, firestore_1.onDocumentWritten)('users/{uid}', async (event) => {
+    var _a;
+    const data = (_a = event.data) === null || _a === void 0 ? void 0 : _a.after.data();
+    if (!(data === null || data === void 0 ? void 0 : data.orgId) || !(data === null || data === void 0 ? void 0 : data.role))
+        return;
+    await getAdmin().auth().setCustomUserClaims(event.params.uid, {
+        orgId: data.orgId,
+        role: data.role,
+    });
+});
 exports.refreshUserClaims = (0, https_1.onCall)(async (request) => {
     if (!request.auth) {
         throw new https_1.HttpsError('unauthenticated', 'Must be signed in.');
     }
-    const uid = request.auth.uid;
-    const userSnap = await getAdmin().firestore().doc(`users/${uid}`).get();
-    if (!userSnap.exists) {
+    const result = await setClaimsFromUserDoc(request.auth.uid);
+    if (!result) {
         throw new https_1.HttpsError('not-found', 'User profile not found.');
     }
-    const { orgId, role } = userSnap.data();
-    await getAdmin().auth().setCustomUserClaims(uid, { orgId, role });
-    return { orgId, role };
+    return result;
 });
 //# sourceMappingURL=index.js.map

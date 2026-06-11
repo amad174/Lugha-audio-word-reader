@@ -23,13 +23,9 @@ import { generateInviteCode, slugifyId } from '../utils/validation';
 /** Sync orgId/role custom claims onto the ID token (required for Storage rules). */
 export async function syncAuthClaims(): Promise<void> {
   if (!auth.currentUser) return;
-  try {
-    const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
-    await refreshClaims({});
-    await auth.currentUser.getIdToken(true);
-  } catch {
-    // Function may be unavailable; storage rules fall back to Firestore lookups
-  }
+  const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
+  await refreshClaims({});
+  await auth.currentUser.getIdToken(true);
 }
 
 export async function mapFirebaseUser(fbUser: FirebaseUser): Promise<AppUser | null> {

@@ -29,7 +29,7 @@
     "emulators": "firebase emulators:start",
     "test:integration": "firebase emulators:exec --only auth,firestore,storage \"CI=true FIREBASE_INTEGRATION_TEST=true npm test -- --watchAll=false --testPathPattern=integration\"",
     "test:emulators": "firebase emulators:exec --only auth,firestore,storage \"CI=true npm test -- --watchAll=false --testPathIgnorePatterns=integration\"",
-    "deploy:rules": "firebase deploy --only firestore:rules,storage"
+    "deploy:rules": "firebase deploy --only firestore:rules,storage:app"
   },
   "eslintConfig": {
     "extends": [
