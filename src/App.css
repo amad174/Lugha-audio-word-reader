@@ -16,11 +16,13 @@
 
 .main {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   background: var(--color-surface);
   border-top: 1px solid var(--color-muted);
+  min-height: 0;
 }
 
 .importProgress {

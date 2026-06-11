@@ -32,7 +32,7 @@ export function BookReaderPage() {
   const [pages, setPages] = useState<BookPage[]>([]);
   const [mappings, setMappings] = useState<AudioMapping>({});
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [mode, setMode] = useState<AppMode>('play');
+  const [mode, setMode] = useState<AppMode>(() => (isTeacher ? 'draw' : 'play'));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingBox, setPendingBox] = useState<BoundingBox | null>(null);
@@ -84,7 +84,6 @@ export function BookReaderPage() {
     const updated = [...currentPage.boxes.filter(b => b.id !== box.id), box];
     setPages(prev => prev.map(p => p.id === currentPage.id ? { ...p, boxes: updated } : p));
     await savePageBoxes(orgId, bookId, currentPage.id, updated);
-    setPendingBox(box);
   }, [currentPage, orgId, bookId]);
 
   const handleBoxDelete = useCallback(async (id: string) => {

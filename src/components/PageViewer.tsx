@@ -26,6 +26,21 @@ interface DrawState {
 
 const EMPTY_DRAW: DrawState = { active: false, startX: 0, startY: 0, currentX: 0, currentY: 0 };
 
+export function getDisplayScale(
+  displayWidth: number,
+  displayHeight: number,
+  naturalWidth: number,
+  naturalHeight: number
+): { scaleX: number; scaleY: number } {
+  if (naturalWidth <= 0 || naturalHeight <= 0) {
+    return { scaleX: 1, scaleY: 1 };
+  }
+  return {
+    scaleX: displayWidth / naturalWidth,
+    scaleY: displayHeight / naturalHeight,
+  };
+}
+
 export const PageViewer: React.FC<Props> = ({
   imageSrc, mappings, mode, boxes, isAdmin,
   onBoxClick, onBoxAdd, onBoxDelete, onWordHeard, onSwipe,
@@ -42,15 +57,23 @@ export const PageViewer: React.FC<Props> = ({
   const [imgNatural, setImgNatural] = useState({ w: 0, h: 0 });
   const [draw, setDraw] = useState<DrawState>(EMPTY_DRAW);
 
-  const updateScale = useCallback(() => {
-    if (!imgRef.current || imgNatural.w === 0) return;
-    const r = imgRef.current.getBoundingClientRect();
-    setScaleX(r.width / imgNatural.w);
-    setScaleY(r.height / imgNatural.h);
-    if (overlayRef.current) {
-      overlayRef.current.width = r.width;
-      overlayRef.current.height = r.height;
-    }
+  const syncLayout = useCallback(() => {
+    const img = imgRef.current;
+    const overlay = overlayRef.current;
+    if (!img || !overlay || imgNatural.w === 0) return;
+
+    const w = img.offsetWidth;
+    const h = img.offsetHeight;
+    if (w === 0 || h === 0) return;
+
+    const { scaleX: sx, scaleY: sy } = getDisplayScale(w, h, imgNatural.w, imgNatural.h);
+    setScaleX(sx);
+    setScaleY(sy);
+
+    overlay.style.width = `${w}px`;
+    overlay.style.height = `${h}px`;
+    overlay.width = Math.round(w);
+    overlay.height = Math.round(h);
   }, [imgNatural]);
 
   const handleImageLoad = useCallback(() => {
@@ -64,12 +87,12 @@ export const PageViewer: React.FC<Props> = ({
   }, []);
 
   useEffect(() => {
-    updateScale();
-    window.addEventListener('resize', updateScale);
-    const ro = new ResizeObserver(updateScale);
+    syncLayout();
+    window.addEventListener('resize', syncLayout);
+    const ro = new ResizeObserver(syncLayout);
     if (imgRef.current) ro.observe(imgRef.current);
-    return () => { window.removeEventListener('resize', updateScale); ro.disconnect(); };
-  }, [updateScale]);
+    return () => { window.removeEventListener('resize', syncLayout); ro.disconnect(); };
+  }, [syncLayout]);
 
   useEffect(() => {
     if (!overlayRef.current) return;
@@ -105,11 +128,11 @@ export const PageViewer: React.FC<Props> = ({
   };
 
   const onDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    // Record touch start for swipe detection
     if ('touches' in e && e.touches[0]) {
       touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
     if (mode !== 'draw') return;
+    e.preventDefault();
     const { clientX, clientY } = xy(e);
     const { px, py } = toXY(clientX, clientY);
     setDraw({ active: true, startX: px, startY: py, currentX: px, currentY: py });
@@ -119,6 +142,7 @@ export const PageViewer: React.FC<Props> = ({
   const onMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     const { clientX, clientY } = xy(e);
     if (mode === 'draw' && draw.active) {
+      e.preventDefault();
       const { px, py } = toXY(clientX, clientY);
       setDraw(prev => ({ ...prev, currentX: px, currentY: py }));
     } else {
@@ -128,7 +152,6 @@ export const PageViewer: React.FC<Props> = ({
   }, [mode, draw.active, toXY, getBoxAt]);
 
   const onUp = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    // Detect horizontal swipe on touch (non-draw modes only)
     if (mode !== 'draw' && 'changedTouches' in e && e.changedTouches[0] && touchStartRef.current) {
       const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
       const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
@@ -140,19 +163,20 @@ export const PageViewer: React.FC<Props> = ({
     }
     touchStartRef.current = null;
 
-    // Finish drawing a new box
     if (mode === 'draw' && draw.active) {
+      const { startX, startY, currentX, currentY } = draw;
       setDraw(EMPTY_DRAW);
-      const pw = Math.abs(draw.currentX - draw.startX);
-      const ph = Math.abs(draw.currentY - draw.startY);
-      if (pw < 12 || ph < 12) return;
 
-      const x0 = Math.min(draw.startX, draw.currentX);
-      const y0 = Math.min(draw.startY, draw.currentY);
+      const pw = Math.abs(currentX - startX);
+      const ph = Math.abs(currentY - startY);
+      if (pw < 8 || ph < 8) return;
+
+      const x0 = Math.min(startX, currentX);
+      const y0 = Math.min(startY, currentY);
       const imgX = Math.max(0, Math.round(x0 / scaleX));
       const imgY = Math.max(0, Math.round(y0 / scaleY));
-      const imgW = Math.round(pw / scaleX);
-      const imgH = Math.round(ph / scaleY);
+      const imgW = Math.max(1, Math.round(pw / scaleX));
+      const imgH = Math.max(1, Math.round(ph / scaleY));
 
       const id = imageCanvasRef.current
         ? getBoxHash(imageCanvasRef.current, imgX, imgY, imgW, imgH)
@@ -179,7 +203,6 @@ export const PageViewer: React.FC<Props> = ({
     if (mode === 'assign') {
       onBoxClick(box);
     } else {
-      // play mode
       if (mappings[box.id]) {
         playAudio(mappings[box.id])
           .then(() => onWordHeard?.(box.id))

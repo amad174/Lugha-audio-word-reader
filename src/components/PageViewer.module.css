@@ -14,6 +14,7 @@
 
 .imageWrapper {
   position: relative;
+  flex-shrink: 0;
   width: 100%;
   max-width: 900px;
   background: var(--color-surface);
@@ -21,6 +22,7 @@
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(23, 23, 23, 0.06);
+  line-height: 0;
 }
 
 .pageImage {
@@ -33,9 +35,8 @@
 
 .overlay {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  top: 0;
+  left: 0;
   touch-action: none;
 }
 
@@ -44,6 +45,7 @@
 }
 
 .stats {
+  flex-shrink: 0;
   width: 100%;
   max-width: 900px;
   margin-top: var(--space-xs);
