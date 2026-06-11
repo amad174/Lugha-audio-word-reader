@@ -5,33 +5,53 @@ import {
   deleteObject,
   listAll,
 } from 'firebase/storage';
-import { auth, storage } from '../firebase/config';
-import { syncAuthClaims } from './authService';
+import { httpsCallable } from 'firebase/functions';
+import { auth, functions, storage } from '../firebase/config';
 
 function dataUrlToBlob(dataUrl: string): Blob {
   const [header, encoded] = dataUrl.split(',');
   const mime = header.match(/data:([^;]+)/)?.[1] ?? 'application/octet-stream';
-  const bytes =
-    typeof Buffer !== 'undefined'
-      ? Buffer.from(encoded, 'base64')
-      : Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+  const bytes = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
   return new Blob([bytes], { type: mime });
 }
 
-async function ensureAuthToken(): Promise<void> {
-  if (auth.currentUser) {
-    await syncAuthClaims();
-  }
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(',')[1] ?? '');
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function shouldUseCallableUpload(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    process.env.REACT_APP_USE_FIREBASE_EMULATOR !== 'true'
+  );
+}
+
+async function uploadViaCallable(path: string, blob: Blob, contentType: string): Promise<string> {
+  const dataBase64 = await blobToBase64(blob);
+  const fn = httpsCallable<
+    { path: string; contentType: string; dataBase64: string },
+    { downloadUrl: string }
+  >(functions, 'uploadStorageFile');
+  const result = await fn({ path, contentType, dataBase64 });
+  return result.data.downloadUrl;
 }
 
 function formatUploadError(err: unknown): never {
   if (err && typeof err === 'object' && 'code' in err) {
     const code = String((err as { code: string }).code);
-    if (code.includes('storage/unauthorized')) {
-      throw new Error('Upload denied. Sign out, sign back in, and try again.');
+    if (code.includes('storage/unauthorized') || code.includes('permission-denied')) {
+      throw new Error('Upload denied. Only teachers can upload files for their organization.');
     }
-    if (code === 'functions/internal') {
-      throw new Error('Upload failed while syncing permissions. Please try again.');
+    if (code === 'functions/unauthenticated') {
+      throw new Error('Sign in required to upload files.');
     }
   }
   if (err instanceof Error && err.message && err.message !== 'internal') {
@@ -74,15 +94,17 @@ async function uploadViaStorageEmulatorRest(
 }
 
 async function uploadBytesWithAuth(path: string, blob: Blob): Promise<string> {
-  const useEmulatorRest =
-    typeof window === 'undefined' && process.env.FIREBASE_STORAGE_EMULATOR_HOST;
+  const contentType = blob.type || 'application/octet-stream';
 
   try {
-    if (useEmulatorRest) {
-      return await uploadViaStorageEmulatorRest(path, blob, blob.type || 'application/octet-stream');
+    if (typeof window === 'undefined' && process.env.FIREBASE_STORAGE_EMULATOR_HOST) {
+      return await uploadViaStorageEmulatorRest(path, blob, contentType);
     }
 
-    await ensureAuthToken();
+    if (shouldUseCallableUpload()) {
+      return await uploadViaCallable(path, blob, contentType);
+    }
+
     const storageRef = ref(storage, path);
     await uploadBytes(storageRef, blob);
     return getDownloadURL(storageRef);
