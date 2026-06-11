@@ -20,11 +20,15 @@ import { auth, db, functions } from '../firebase/config';
 import { AppUser, UserRole } from '../types';
 import { generateInviteCode, slugifyId } from '../utils/validation';
 
-/** Sync orgId/role custom claims onto the ID token (required for Storage rules). */
+/** Sync orgId/role custom claims onto the ID token (helps Storage rules). Best-effort. */
 export async function syncAuthClaims(): Promise<void> {
   if (!auth.currentUser) return;
-  const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
-  await refreshClaims({});
+  try {
+    const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
+    await refreshClaims({});
+  } catch (err) {
+    console.warn('refreshUserClaims failed', err);
+  }
   await auth.currentUser.getIdToken(true);
 }
 

@@ -24,6 +24,22 @@ async function ensureAuthToken(): Promise<void> {
   }
 }
 
+function formatUploadError(err: unknown): never {
+  if (err && typeof err === 'object' && 'code' in err) {
+    const code = String((err as { code: string }).code);
+    if (code.includes('storage/unauthorized')) {
+      throw new Error('Upload denied. Sign out, sign back in, and try again.');
+    }
+    if (code === 'functions/internal') {
+      throw new Error('Upload failed while syncing permissions. Please try again.');
+    }
+  }
+  if (err instanceof Error && err.message && err.message !== 'internal') {
+    throw err;
+  }
+  throw new Error('Upload failed. Please try again.');
+}
+
 async function uploadViaStorageEmulatorRest(
   path: string,
   blob: Blob,
@@ -61,14 +77,18 @@ async function uploadBytesWithAuth(path: string, blob: Blob): Promise<string> {
   const useEmulatorRest =
     typeof window === 'undefined' && process.env.FIREBASE_STORAGE_EMULATOR_HOST;
 
-  if (useEmulatorRest) {
-    return uploadViaStorageEmulatorRest(path, blob, blob.type || 'application/octet-stream');
-  }
+  try {
+    if (useEmulatorRest) {
+      return await uploadViaStorageEmulatorRest(path, blob, blob.type || 'application/octet-stream');
+    }
 
-  await ensureAuthToken();
-  const storageRef = ref(storage, path);
-  await uploadBytes(storageRef, blob);
-  return getDownloadURL(storageRef);
+    await ensureAuthToken();
+    const storageRef = ref(storage, path);
+    await uploadBytes(storageRef, blob);
+    return getDownloadURL(storageRef);
+  } catch (err) {
+    formatUploadError(err);
+  }
 }
 
 export function pageImagePath(orgId: string, bookId: string, pageId: string): string {

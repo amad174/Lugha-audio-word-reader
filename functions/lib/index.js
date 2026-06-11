@@ -1,56 +1,23 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.refreshUserClaims = exports.syncClaimsOnUserWrite = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-functions/v2/firestore");
-const admin = __importStar(require("firebase-admin"));
-function getAdmin() {
-    if (admin.apps.length === 0) {
-        admin.initializeApp({
-            projectId: process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || 'lughaapp',
-        });
+const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
+const firestore_2 = require("firebase-admin/firestore");
+function ensureAdmin() {
+    if ((0, app_1.getApps)().length === 0) {
+        (0, app_1.initializeApp)();
     }
-    return admin.app();
 }
 async function setClaimsFromUserDoc(uid) {
-    const userSnap = await getAdmin().firestore().doc(`users/${uid}`).get();
+    ensureAdmin();
+    const userSnap = await (0, firestore_2.getFirestore)().doc(`users/${uid}`).get();
     if (!userSnap.exists)
         return null;
     const { orgId, role } = userSnap.data();
-    await getAdmin().auth().setCustomUserClaims(uid, { orgId, role });
+    await (0, auth_1.getAuth)().setCustomUserClaims(uid, { orgId, role });
     return { orgId, role };
 }
 /** Keeps auth custom claims in sync whenever a user profile is written. */
@@ -59,7 +26,8 @@ exports.syncClaimsOnUserWrite = (0, firestore_1.onDocumentWritten)('users/{uid}'
     const data = (_a = event.data) === null || _a === void 0 ? void 0 : _a.after.data();
     if (!(data === null || data === void 0 ? void 0 : data.orgId) || !(data === null || data === void 0 ? void 0 : data.role))
         return;
-    await getAdmin().auth().setCustomUserClaims(event.params.uid, {
+    ensureAdmin();
+    await (0, auth_1.getAuth)().setCustomUserClaims(event.params.uid, {
         orgId: data.orgId,
         role: data.role,
     });
@@ -68,10 +36,18 @@ exports.refreshUserClaims = (0, https_1.onCall)(async (request) => {
     if (!request.auth) {
         throw new https_1.HttpsError('unauthenticated', 'Must be signed in.');
     }
-    const result = await setClaimsFromUserDoc(request.auth.uid);
-    if (!result) {
-        throw new https_1.HttpsError('not-found', 'User profile not found.');
+    try {
+        const result = await setClaimsFromUserDoc(request.auth.uid);
+        if (!result) {
+            throw new https_1.HttpsError('not-found', 'User profile not found.');
+        }
+        return result;
     }
-    return result;
+    catch (err) {
+        if (err instanceof https_1.HttpsError)
+            throw err;
+        console.error('refreshUserClaims failed', err);
+        throw new https_1.HttpsError('internal', 'Could not refresh user permissions.');
+    }
 });
 //# sourceMappingURL=index.js.map
