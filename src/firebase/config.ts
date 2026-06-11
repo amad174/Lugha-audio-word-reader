@@ -11,11 +11,16 @@ import {
 import { getStorage, connectStorageEmulator, FirebaseStorage } from 'firebase/storage';
 import { getFunctions, connectFunctionsEmulator, Functions } from 'firebase/functions';
 
+const projectId = process.env.REACT_APP_FIREBASE_PROJECT_ID;
+const storageBucket =
+  process.env.REACT_APP_FIREBASE_STORAGE_BUCKET ||
+  (projectId ? `${projectId}.firebasestorage.app` : undefined);
+
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  projectId,
+  storageBucket,
   messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.REACT_APP_FIREBASE_APP_ID,
 };
@@ -52,7 +57,10 @@ export const db: Firestore = useEmulators
   : initializeFirestore(app, {
       localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
     });
-export const storage: FirebaseStorage = getStorage(app);
+export const storage: FirebaseStorage = getStorage(
+  app,
+  storageBucket || `${firebaseConfig.projectId}.firebasestorage.app`
+);
 export const functions: Functions = getFunctions(app, 'us-central1');
 
 let emulatorsConnected = false;

@@ -7,6 +7,9 @@
       "storage": {
         "app": [
           "lughaapp.firebasestorage.app"
+        ],
+        "legacy": [
+          "lughaapp.appspot.com"
         ]
       }
     }

@@ -7,6 +7,10 @@
     {
       "target": "app",
       "rules": "firebase/storage.rules"
+    },
+    {
+      "target": "legacy",
+      "rules": "firebase/storage.rules"
     }
   ],
   "functions": [
