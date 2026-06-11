@@ -18,11 +18,9 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
+  min-height: 0;
   background: var(--color-surface);
   border-top: 1px solid var(--color-muted);
-  min-height: 0;
 }
 
 .importProgress {

@@ -83,7 +83,12 @@ export function BookReaderPage() {
     if (!currentPage) return;
     const updated = [...currentPage.boxes.filter(b => b.id !== box.id), box];
     setPages(prev => prev.map(p => p.id === currentPage.id ? { ...p, boxes: updated } : p));
-    await savePageBoxes(orgId, bookId, currentPage.id, updated);
+    try {
+      await savePageBoxes(orgId, bookId, currentPage.id, updated);
+    } catch (e) {
+      setPages(prev => prev.map(p => p.id === currentPage.id ? { ...p, boxes: currentPage.boxes } : p));
+      setError(e instanceof Error ? e.message : 'Could not save box.');
+    }
   }, [currentPage, orgId, bookId]);
 
   const handleBoxDelete = useCallback(async (id: string) => {
@@ -223,6 +228,13 @@ export function BookReaderPage() {
       {importing && (
         <div className="importProgress" role="status">
           Importing page {importing.current} of {importing.total}…
+        </div>
+      )}
+
+      {error && (
+        <div className="errorBanner" role="alert" onClick={() => setError(null)}>
+          {error}
+          <span className="errorDismiss">Dismiss</span>
         </div>
       )}
 
