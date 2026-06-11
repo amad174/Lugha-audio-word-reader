@@ -1,0 +1,74 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background-color: var(--color-scrim);
+}
+
+.panel {
+  width: 100%;
+  max-height: 92vh;
+  overflow: auto;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-muted);
+  border-bottom: none;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  color: var(--color-on-surface);
+  padding-bottom: var(--safe-bottom);
+  animation: sheetUp 220ms ease-out;
+}
+
+@keyframes sheetUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.handle {
+  width: 40px;
+  height: 4px;
+  margin: var(--space-xs) auto var(--space-xs);
+  border-radius: var(--radius-full);
+  background-color: var(--color-muted);
+}
+
+.inner {
+  padding: 0 var(--space-sm) var(--space-sm);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-xs);
+}
+
+.title {
+  margin: 0;
+  font: var(--text-headline-sm);
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--color-muted);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  cursor: pointer;
+}
+
+.close:hover {
+  border-color: var(--color-on-surface);
+}

@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
+import { ArrowLeft, Lock, Plus } from 'lucide-react';
 import { UserProfile, GameConfig } from '../types';
 import { AVATARS, ACHIEVEMENTS, createProfile, pointsToNextLevel } from '../utils/game';
+import { Button } from './ui/Button';
+import { Card } from './ui/Card';
+import { Input } from './ui/Input';
 import styles from './ProfileSelect.module.css';
 
 interface Props {
@@ -35,30 +39,34 @@ export const ProfileSelect: React.FC<Props> = ({
   if (view === 'create') {
     return (
       <div className={styles.screen}>
-        <div className={styles.stars} aria-hidden />
-        <div className={styles.createCard}>
-          <button className={styles.backBtn} onClick={() => setView('select')}>← Back</button>
+        <Card className={styles.createCard} padding="lg">
+          <Button variant="link" className={styles.backBtn} onClick={() => setView('select')}>
+            <ArrowLeft size={18} aria-hidden />
+            Back
+          </Button>
           <h2 className={styles.createTitle}>Create Your Profile</h2>
 
-          <p className={styles.fieldLabel}>Your name</p>
-          <input
-            className={styles.nameInput}
+          <Input
+            label="Your name"
             value={name}
             onChange={e => { setName(e.target.value); setNameError(''); }}
             placeholder="e.g. Ahmed"
             maxLength={20}
             autoFocus
+            error={nameError || undefined}
             onKeyDown={e => e.key === 'Enter' && handleCreate()}
           />
-          {nameError && <p className={styles.nameError}>{nameError}</p>}
 
           <p className={styles.fieldLabel}>Pick your avatar</p>
           <div className={styles.avatarGrid}>
             {AVATARS.map(a => (
               <button
                 key={a}
+                type="button"
                 className={`${styles.avatarBtn} ${avatar === a ? styles.avatarSelected : ''}`}
                 onClick={() => setAvatar(a)}
+                aria-label={`Avatar ${a}`}
+                aria-pressed={avatar === a}
               >
                 {a}
               </button>
@@ -70,29 +78,26 @@ export const ProfileSelect: React.FC<Props> = ({
             <span className={styles.previewName}>{name || 'Your name'}</span>
           </div>
 
-          <button className={styles.createBtn} onClick={handleCreate}>
-            Let's go! 🚀
-          </button>
-        </div>
+          <Button fullWidth onClick={handleCreate}>
+            Let&apos;s go!
+          </Button>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className={styles.screen}>
-      <div className={styles.stars} aria-hidden />
-
-      <div className={styles.header}>
-        <div className={styles.logo}>📖</div>
-        <h1 className={styles.appTitle}>Iqra Audio</h1>
-        <p className={styles.subtitle}>Who's learning today?</p>
-      </div>
+      <header className={styles.hero}>
+        <h1 className={styles.appTitle}>Lugha</h1>
+        <p className={styles.subtitle}>Who&apos;s learning today?</p>
+      </header>
 
       <div className={styles.profileGrid}>
         {profiles.map(p => {
           const { current, progress } = pointsToNextLevel(p.totalPoints, gameConfig.levels);
           return (
-            <button key={p.id} className={styles.profileCard} onClick={() => onSelect(p)}>
+            <button key={p.id} type="button" className={styles.profileCard} onClick={() => onSelect(p)}>
               <div className={styles.cardAvatar}>{p.avatar}</div>
               <div className={styles.cardName}>{p.name}</div>
               <div className={styles.cardLevel}>
@@ -117,16 +122,19 @@ export const ProfileSelect: React.FC<Props> = ({
           );
         })}
 
-        <button className={styles.newProfileCard} onClick={() => setView('create')}>
-          <span className={styles.newIcon}>+</span>
+        <button type="button" className={styles.newProfileCard} onClick={() => setView('create')}>
+          <Plus size={28} strokeWidth={1.5} aria-hidden />
           <span className={styles.newLabel}>New Player</span>
         </button>
       </div>
 
-      <div className={styles.footer}>
-        <button className={styles.guestBtn} onClick={onGuest}>Play as Guest</button>
-        <button className={styles.teacherBtn} onClick={onAdminLogin}>🔐 Teacher</button>
-      </div>
+      <footer className={styles.footer}>
+        <Button variant="secondary" onClick={onGuest}>Play as Guest</Button>
+        <Button variant="link" onClick={onAdminLogin}>
+          <Lock size={16} aria-hidden />
+          Teacher
+        </Button>
+      </footer>
     </div>
   );
 };

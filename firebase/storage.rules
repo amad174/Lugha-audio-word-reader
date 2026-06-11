@@ -1,0 +1,32 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      let snap = firestore.get(/databases/(default)/documents/users/$(request.auth.uid));
+      return snap != null && snap.data != null ? snap.data : null;
+    }
+
+    function isOrgMember(orgId) {
+      return isSignedIn() && (
+        request.auth.token.orgId == orgId ||
+        (userDoc() != null && userDoc().orgId == orgId)
+      );
+    }
+
+    function isTeacher(orgId) {
+      return isSignedIn() && (
+        (request.auth.token.role == 'teacher' && request.auth.token.orgId == orgId) ||
+        (userDoc() != null && userDoc().role == 'teacher' && userDoc().orgId == orgId)
+      );
+    }
+
+    match /orgs/{orgId}/books/{bookId}/{allPaths=**} {
+      allow read: if isOrgMember(orgId);
+      allow write: if isTeacher(orgId);
+    }
+  }
+}

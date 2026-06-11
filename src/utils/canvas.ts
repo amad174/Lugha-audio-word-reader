@@ -1,5 +1,9 @@
 import { BoundingBox, AudioMapping } from '../types';
 
+const PRIMARY = '#20614c';
+const ERROR = '#d94b4b';
+const UNMAPPED = '#6d9189';
+
 export function drawBoxes(
   canvas: HTMLCanvasElement,
   boxes: BoundingBox[],
@@ -27,44 +31,42 @@ export function drawBoxes(
     ctx.save();
 
     if (deleteMode && isHovered) {
-      ctx.strokeStyle = '#e74c3c';
+      ctx.strokeStyle = ERROR;
       ctx.lineWidth = 2.5;
-      ctx.fillStyle = 'rgba(231,76,60,0.2)';
+      ctx.fillStyle = 'rgba(217,75,75,0.2)';
     } else if (isSelected) {
-      ctx.strokeStyle = '#f39c12';
+      ctx.strokeStyle = PRIMARY;
       ctx.lineWidth = 3;
-      ctx.fillStyle = 'rgba(243,156,18,0.25)';
+      ctx.fillStyle = 'rgba(32,97,76,0.25)';
     } else if (isHovered) {
-      ctx.strokeStyle = isMapped ? '#2ecc71' : '#3498db';
+      ctx.strokeStyle = isMapped ? PRIMARY : UNMAPPED;
       ctx.lineWidth = 2.5;
-      ctx.fillStyle = isMapped ? 'rgba(46,204,113,0.2)' : 'rgba(52,152,219,0.2)';
+      ctx.fillStyle = isMapped ? 'rgba(32,97,76,0.2)' : 'rgba(109,145,137,0.2)';
     } else if (isMapped) {
-      ctx.strokeStyle = '#27ae60';
+      ctx.strokeStyle = PRIMARY;
       ctx.lineWidth = 1.5;
-      ctx.fillStyle = 'rgba(39,174,96,0.08)';
+      ctx.fillStyle = 'rgba(32,97,76,0.08)';
     } else {
-      ctx.strokeStyle = 'rgba(52,152,219,0.55)';
+      ctx.strokeStyle = 'rgba(109,145,137,0.55)';
       ctx.lineWidth = 1.5;
-      ctx.fillStyle = 'rgba(52,152,219,0.06)';
+      ctx.fillStyle = 'rgba(109,145,137,0.06)';
     }
 
     ctx.fillRect(rx, ry, rw, rh);
     ctx.strokeRect(rx, ry, rw, rh);
 
-    // Green dot = has audio
     if (isMapped && !deleteMode) {
       ctx.beginPath();
       ctx.arc(rx + rw - 5, ry + 5, 4, 0, Math.PI * 2);
-      ctx.fillStyle = '#2ecc71';
+      ctx.fillStyle = PRIMARY;
       ctx.fill();
     }
 
-    // Delete X indicator on hover in delete mode
     if (deleteMode && isHovered) {
       const cx = rx + rw / 2;
       const cy = ry + rh / 2;
       const s = Math.min(rw, rh) * 0.25;
-      ctx.strokeStyle = '#e74c3c';
+      ctx.strokeStyle = ERROR;
       ctx.lineWidth = 2.5;
       ctx.lineCap = 'round';
       ctx.beginPath();
@@ -76,13 +78,12 @@ export function drawBoxes(
     ctx.restore();
   }
 
-  // Draw preview while dragging
   if (drawPreview && drawPreview.w > 4 && drawPreview.h > 4) {
     ctx.save();
-    ctx.strokeStyle = '#e74c3c';
+    ctx.strokeStyle = ERROR;
     ctx.lineWidth = 2;
     ctx.setLineDash([6, 3]);
-    ctx.fillStyle = 'rgba(231,76,60,0.12)';
+    ctx.fillStyle = 'rgba(217,75,75,0.12)';
     ctx.fillRect(drawPreview.x, drawPreview.y, drawPreview.w, drawPreview.h);
     ctx.strokeRect(drawPreview.x, drawPreview.y, drawPreview.w, drawPreview.h);
     ctx.restore();

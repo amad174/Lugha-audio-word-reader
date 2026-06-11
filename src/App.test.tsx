@@ -1,9 +1,16 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import App from './App';
+import { EmptyState } from './components/EmptyState';
 
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+/** @deprecated EmptyState kept for reference; app now uses Firebase library flow */
+test('empty state shows Lugha title', () => {
+  render(
+    <EmptyState
+      isAdmin={false}
+      onImport={jest.fn()}
+      onImportBundle={jest.fn()}
+      onAdminLogin={jest.fn()}
+    />
+  );
+  expect(screen.getByRole('heading', { name: 'Lugha' })).toBeInTheDocument();
 });

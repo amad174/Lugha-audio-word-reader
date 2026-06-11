@@ -1,0 +1,63 @@
+.root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md) var(--gutter);
+  gap: var(--space-sm);
+  text-align: center;
+  overflow: auto;
+}
+
+.mark {
+  margin: 0;
+  font: var(--text-headline-sm);
+  font-family: var(--font-display);
+  color: var(--color-primary);
+  letter-spacing: -0.02em;
+}
+
+.title {
+  margin: 0;
+  font: var(--text-headline-md);
+  font-family: var(--font-display);
+  color: var(--color-on-surface);
+  letter-spacing: -0.02em;
+}
+
+.desc {
+  margin: 0;
+  max-width: 22rem;
+  font: var(--text-body-md);
+  color: var(--color-on-surface);
+  opacity: 0.75;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-xs);
+  width: 100%;
+  max-width: 280px;
+}
+
+.guide {
+  max-width: 360px;
+  width: 100%;
+  text-align: left;
+}
+
+.steps {
+  margin: 0;
+  padding-left: 1.25rem;
+  font: var(--text-body-sm);
+  color: var(--color-on-surface);
+  line-height: 1.75;
+}
+
+.steps strong {
+  font-weight: 700;
+}

@@ -1,7 +1,7 @@
 {
-  "short_name": "Iqra Audio",
-  "name": "Iqra Audio Learning App",
-  "description": "Tap words and letters on Iqra pages to hear their pronunciation",
+  "short_name": "Lugha",
+  "name": "Lugha — Audio Word Reader",
+  "description": "Tap words and letters on book pages to hear their pronunciation",
   "icons": [
     {
       "src": "favicon.ico",
@@ -24,7 +24,7 @@
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#16213e",
-  "background_color": "#1a1a2e",
+  "theme_color": "#20614c",
+  "background_color": "#fafafa",
   "categories": ["education", "kids"]
 }

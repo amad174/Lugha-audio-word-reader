@@ -1,0 +1,106 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-height: var(--btn-height);
+  padding: 0 var(--space-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  font: var(--text-label-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+  font-family: inherit;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.primary {
+  background-color: var(--color-primary);
+  color: var(--color-primary-contrast);
+  border-color: var(--color-primary);
+}
+
+.primary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+.secondary {
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
+  border-color: var(--color-muted);
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: var(--color-on-surface);
+}
+
+.link {
+  background: transparent;
+  color: var(--color-primary);
+  border-color: transparent;
+  min-height: auto;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  font: var(--text-label-md);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.link:hover:not(:disabled) {
+  color: var(--color-primary-hover);
+}
+
+.danger {
+  background-color: var(--color-error-bg);
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.danger:hover:not(:disabled) {
+  background-color: var(--color-error);
+  color: var(--color-primary-contrast);
+}
+
+.icon {
+  min-height: var(--btn-height);
+  min-width: var(--btn-height);
+  padding: 0;
+  border-radius: var(--radius-full);
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
+  border-color: var(--color-muted);
+}
+
+.icon:hover:not(:disabled) {
+  border-color: var(--color-on-surface);
+}
+
+.iconActive {
+  background-color: var(--color-primary);
+  color: var(--color-primary-contrast);
+  border-color: var(--color-primary);
+}
+
+.sm {
+  min-height: 40px;
+  padding: 0 var(--space-xs);
+  font: var(--text-label-sm);
+}
+
+.fullWidth {
+  width: 100%;
+}

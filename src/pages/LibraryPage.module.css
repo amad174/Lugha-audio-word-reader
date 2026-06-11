@@ -1,0 +1,209 @@
+.library {
+  min-height: 100vh;
+  background: var(--color-neutral);
+  padding: var(--space-sm);
+  padding-top: calc(var(--safe-top) + var(--space-sm));
+  overflow-y: auto;
+}
+
+.header {
+  max-width: 960px;
+  margin: 0 auto var(--space-sm);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.title {
+  font: var(--text-headline-lg);
+  font-family: var(--font-display);
+}
+
+.orgName {
+  font: var(--text-overline);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.section {
+  max-width: 960px;
+  margin: 0 auto var(--space-md);
+}
+
+.sectionTitle {
+  font: var(--text-overline);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  margin-bottom: var(--space-xs);
+}
+
+.bookGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-xs);
+}
+
+.bookCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-muted);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--transition-fast);
+}
+
+.bookCard:hover {
+  border-color: var(--color-primary);
+}
+
+.cover {
+  width: 100%;
+  aspect-ratio: 3/4;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--color-neutral);
+  margin-bottom: 8px;
+}
+
+.coverPlaceholder {
+  width: 100%;
+  aspect-ratio: 3/4;
+  background: var(--color-neutral);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.bookTitle {
+  font: var(--text-label-md);
+  margin-bottom: 4px;
+}
+
+.bookMeta {
+  font: var(--text-body-sm);
+  color: #6b7280;
+}
+
+.empty {
+  max-width: 960px;
+  margin: var(--space-lg) auto;
+  text-align: center;
+  padding: var(--space-md);
+}
+
+.emptyTitle {
+  font: var(--text-headline-sm);
+  font-family: var(--font-display);
+  margin-bottom: var(--space-xs);
+}
+
+.emptyDesc {
+  font: var(--text-body-md);
+  color: #6b7280;
+  margin-bottom: var(--space-sm);
+}
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.modalActions {
+  display: flex;
+  gap: var(--space-xs);
+  justify-content: flex-end;
+  margin-top: var(--space-sm);
+}
+
+.studentHud {
+  max-width: 960px;
+  margin: 0 auto var(--space-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-muted);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.progressLabel {
+  font: var(--text-label-md);
+}
+
+.progressMeta {
+  font: var(--text-body-sm);
+  color: #6b7280;
+}
+
+.bar {
+  height: 6px;
+  background: var(--color-muted);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-top: 6px;
+  width: 160px;
+}
+
+.barFill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+}
+
+.editActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.successMsg {
+  font: var(--text-body-sm);
+  color: var(--color-primary);
+  margin-bottom: 12px;
+}
+
+.pageGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.pageThumb {
+  background: var(--color-surface);
+  border: 1px solid var(--color-muted);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.pageThumb img {
+  width: 100%;
+  aspect-ratio: 3/4;
+  object-fit: cover;
+  display: block;
+}
+
+.pageThumbLabel {
+  display: block;
+  padding: 6px 8px;
+  font: var(--text-label-sm);
+  color: #6b7280;
+  text-align: center;
+}

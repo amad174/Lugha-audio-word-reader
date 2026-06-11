@@ -1,0 +1,123 @@
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+  listAll,
+} from 'firebase/storage';
+import { auth, storage } from '../firebase/config';
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [header, encoded] = dataUrl.split(',');
+  const mime = header.match(/data:([^;]+)/)?.[1] ?? 'application/octet-stream';
+  const bytes =
+    typeof Buffer !== 'undefined'
+      ? Buffer.from(encoded, 'base64')
+      : Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+  return new Blob([bytes], { type: mime });
+}
+
+async function ensureAuthToken(): Promise<void> {
+  if (auth.currentUser) {
+    await auth.currentUser.getIdToken(true);
+  }
+}
+
+async function uploadViaStorageEmulatorRest(
+  path: string,
+  blob: Blob,
+  contentType: string
+): Promise<string> {
+  const emulatorHost = process.env.FIREBASE_STORAGE_EMULATOR_HOST;
+  if (!emulatorHost || !auth.currentUser) {
+    throw new Error('Storage emulator upload requires auth and FIREBASE_STORAGE_EMULATOR_HOST.');
+  }
+
+  const token = await auth.currentUser.getIdToken(true);
+  const bucket = storage.app.options.storageBucket!;
+  const res = await fetch(
+    `http://${emulatorHost}/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(path)}`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': contentType,
+      },
+      body: blob,
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Storage emulator upload failed (${res.status}): ${text}`);
+  }
+
+  const json = (await res.json()) as { name: string };
+  return `http://${emulatorHost}/v0/b/${bucket}/o/${encodeURIComponent(json.name)}?alt=media`;
+}
+
+async function uploadBytesWithAuth(path: string, blob: Blob): Promise<string> {
+  const useEmulatorRest =
+    typeof window === 'undefined' && process.env.FIREBASE_STORAGE_EMULATOR_HOST;
+
+  if (useEmulatorRest) {
+    return uploadViaStorageEmulatorRest(path, blob, blob.type || 'application/octet-stream');
+  }
+
+  await ensureAuthToken();
+  const storageRef = ref(storage, path);
+  await uploadBytes(storageRef, blob);
+  return getDownloadURL(storageRef);
+}
+
+export function pageImagePath(orgId: string, bookId: string, pageId: string): string {
+  return `orgs/${orgId}/books/${bookId}/pages/${pageId}.jpg`;
+}
+
+export function audioPath(orgId: string, bookId: string, boxId: string): string {
+  return `orgs/${orgId}/books/${bookId}/audio/${boxId}`;
+}
+
+export function coverPath(orgId: string, bookId: string): string {
+  return `orgs/${orgId}/books/${bookId}/cover.jpg`;
+}
+
+export async function uploadDataUrl(path: string, dataUrl: string): Promise<string> {
+  const blob = dataUrlToBlob(dataUrl);
+  return uploadBytesWithAuth(path, blob);
+}
+
+export async function uploadBlob(path: string, blob: Blob): Promise<string> {
+  return uploadBytesWithAuth(path, blob);
+}
+
+export async function deleteStoragePath(path: string): Promise<void> {
+  try {
+    await deleteObject(ref(storage, path));
+  } catch {
+    // file may not exist
+  }
+}
+
+export async function deleteBookStorage(orgId: string, bookId: string): Promise<void> {
+  const base = `orgs/${orgId}/books/${bookId}`;
+  for (const sub of ['pages', 'audio']) {
+    try {
+      const folderRef = ref(storage, `${base}/${sub}`);
+      const listing = await listAll(folderRef);
+      await Promise.all(listing.items.map(item => deleteObject(item)));
+    } catch {
+      // folder may not exist
+    }
+  }
+  await deleteStoragePath(`${base}/cover.jpg`);
+}
+
+export async function dataUrlFromFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target!.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}

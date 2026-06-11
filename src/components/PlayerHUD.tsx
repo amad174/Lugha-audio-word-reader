@@ -13,7 +13,7 @@ export const PlayerHUD: React.FC<Props> = ({ profile, gameConfig, onClick }) => 
   const { current, next, progress } = pointsToNextLevel(profile.totalPoints, gameConfig.levels);
 
   return (
-    <button className={styles.hud} onClick={onClick} title="View profile">
+    <button type="button" className={styles.hud} onClick={onClick} title="View profile">
       <span className={styles.avatar}>{profile.avatar}</span>
       <div className={styles.info}>
         <div className={styles.nameRow}>

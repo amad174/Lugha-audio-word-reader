@@ -1,7 +1,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Use the CDN worker to avoid bundling the large worker file
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Local worker copied to public/
+pdfjsLib.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.min.mjs`;
 
 /**
  * Render every page of a PDF file to data URLs.
@@ -33,4 +33,10 @@ export async function pdfToDataUrls(
   }
 
   return dataUrls;
+}
+
+export async function countPdfPages(file: File): Promise<number> {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  return pdf.numPages;
 }

@@ -181,8 +181,9 @@ export const PageViewer: React.FC<Props> = ({
     } else {
       // play mode
       if (mappings[box.id]) {
-        playAudio(mappings[box.id]).catch(console.error);
-        onWordHeard?.(box.id);
+        playAudio(mappings[box.id])
+          .then(() => onWordHeard?.(box.id))
+          .catch(console.error);
       } else if (isAdmin) {
         onBoxClick(box);
       }
@@ -199,7 +200,7 @@ export const PageViewer: React.FC<Props> = ({
     <div className={styles.container}>
       <canvas ref={imageCanvasRef} className={styles.hiddenCanvas} />
       <div className={styles.imageWrapper}>
-        <img ref={imgRef} src={imageSrc} alt="Iqra page"
+        <img ref={imgRef} src={imageSrc} alt="Lugha page"
           className={styles.pageImage} onLoad={handleImageLoad} draggable={false} />
         <canvas
           ref={overlayRef}
@@ -219,7 +220,7 @@ export const PageViewer: React.FC<Props> = ({
           : mode === 'delete' ? 'Tap a box to delete it'
           : mode === 'assign' ? 'Tap a box to assign audio'
           : boxes.length > 0
-          ? `${boxes.length} boxes · ${Object.keys(mappings).length} with audio · tap to listen`
+          ? `${boxes.length} boxes · ${boxes.filter(b => mappings[b.id]).length} with audio · tap to listen`
           : isAdmin ? 'Switch to Draw mode to add boxes' : 'No boxes yet — ask your teacher to set up this page'}
       </div>
     </div>

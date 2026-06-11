@@ -1,34 +1,6 @@
-:root {
-  --bg-primary: #1a1a2e;
-  --bg-secondary: #16213e;
-  --bg-tertiary: #0f3460;
-  --accent-orange: #e67e22;
-  --accent-green: #27ae60;
-  --accent-blue: #3498db;
-  --text-primary: #ffffff;
-  --text-secondary: #cccccc;
-  --text-muted: #888888;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  overflow: hidden;
-  height: 100vh;
-  width: 100vw;
-}
-
 #root {
-  height: 100vh;
-  width: 100vw;
+  min-height: 100vh;
+  width: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -39,6 +11,7 @@ body {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+  background: var(--color-neutral);
 }
 
 .main {
@@ -46,169 +19,106 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-muted);
 }
 
-/* Empty state */
+.importProgress {
+  flex-shrink: 0;
+  padding: var(--space-xs) var(--gutter);
+  text-align: center;
+  font: var(--text-overline);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-on-surface);
+  background: var(--color-neutral);
+  border-bottom: 1px solid var(--color-muted);
+}
+
+.errorBanner {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--gutter);
+  font: var(--text-body-sm);
+  color: var(--color-error);
+  background: var(--color-error-bg);
+  border-bottom: 1px solid var(--color-error);
+  cursor: pointer;
+}
+
+.errorDismiss {
+  font: var(--text-label-sm);
+  opacity: 0.7;
+}
+
+.loadingScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  background: var(--color-neutral);
+}
+
+.loadingWordmark {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  line-height: 1.1;
+  color: var(--color-primary);
+  letter-spacing: -0.03em;
+}
+
+.loadingMessage {
+  margin: 0;
+  font: var(--text-body-md);
+  color: var(--color-on-surface);
+  opacity: 0.7;
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+  margin-top: var(--space-xs);
+  border: 3px solid var(--color-muted);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: appSpin 0.8s linear infinite;
+}
+
+@keyframes appSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .emptyState {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 32px 24px;
-  gap: 16px;
+  gap: var(--space-sm);
+  padding: var(--space-md);
   text-align: center;
-  overflow: auto;
+  background: var(--color-neutral);
+  min-height: 50vh;
 }
 
-.emptyIcon {
-  font-size: 72px;
-  line-height: 1;
+.emptyState p {
+  margin: 0;
+  font: var(--text-body-md);
+  color: #6b7280;
 }
 
-.emptyTitle {
-  font-size: 28px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #e67e22, #f39c12);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.emptyDesc {
-  color: var(--text-secondary);
-  font-size: 16px;
-  line-height: 1.6;
-  max-width: 300px;
-}
-
-.importBtn {
-  padding: 14px 32px;
-  background: var(--accent-orange);
-  color: #fff;
-  border: none;
-  border-radius: 24px;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.15s, opacity 0.15s;
-}
-
-.importBtn:active {
-  transform: scale(0.97);
-  opacity: 0.9;
-}
-
-.howItWorks {
-  background: var(--bg-secondary);
-  border: 1px solid var(--bg-tertiary);
-  border-radius: 16px;
-  padding: 20px 24px;
-  max-width: 320px;
-  text-align: left;
-}
-
-.howItWorks h3 {
-  color: var(--text-secondary);
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 12px;
-}
-
-.howItWorks ol {
-  padding-left: 20px;
-  color: var(--text-secondary);
-  font-size: 14px;
-  line-height: 1.8;
-}
-
-.howItWorks strong {
-  color: var(--text-primary);
-}
-
-/* PDF import progress */
-.importProgress {
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--bg-tertiary);
-  color: var(--text-secondary);
-  font-size: 13px;
-  padding: 6px 16px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-/* Guest login hint button */
-.loginHintBtn {
-  padding: 12px 28px;
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--bg-tertiary);
-  border-radius: 24px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.loginHintBtn:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-/* Secondary action button (e.g. Load Bundle on empty state) */
-.secondaryBtn {
-  padding: 12px 28px;
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--bg-tertiary);
-  border-radius: 24px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.secondaryBtn:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-/* Error banner */
-.errorBanner {
-  background: rgba(231, 76, 60, 0.15);
-  border-bottom: 1px solid rgba(231, 76, 60, 0.4);
-  color: #e74c3c;
-  font-size: 13px;
-  padding: 8px 16px;
-  text-align: center;
-  cursor: pointer;
-  flex-shrink: 0;
+.emptyStateActions {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-.errorDismiss {
-  font-size: 11px;
-  opacity: 0.7;
-}
-
-/* Loading screen */
-.loadingScreen {
-  position: fixed;
-  inset: 0;
-  background: var(--bg-primary);
-  display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
   justify-content: center;
 }
-.loadingSpinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--bg-tertiary);
-  border-top-color: var(--accent-orange);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }

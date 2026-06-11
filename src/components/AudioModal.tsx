@@ -1,5 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { FileUp, Mic, Square, Play, Upload } from 'lucide-react';
 import { readAudioFile, recordAudio, playAudio } from '../utils/audio';
+import { Modal } from './ui/Modal';
+import { Button } from './ui/Button';
+import { Tabs, TabItem } from './ui/Tabs';
 import styles from './AudioModal.module.css';
 
 interface Props {
@@ -8,15 +12,22 @@ interface Props {
   existingAudio?: string;
 }
 
-type Tab = 'file' | 'record';
-
 export const AudioModal: React.FC<Props> = ({ onAssign, onCancel, existingAudio }) => {
-  const [tab, setTab] = useState<Tab>('file');
+  const [tab, setTab] = useState<'file' | 'record'>('file');
   const [recording, setRecording] = useState(false);
   const [preview, setPreview] = useState<string | null>(existingAudio ?? null);
   const [error, setError] = useState<string | null>(null);
   const recorderRef = useRef<{ stop: () => Promise<string> } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      const rec = recorderRef.current;
+      if (!rec) return;
+      recorderRef.current = null;
+      rec.stop().catch(() => {});
+    };
+  }, []);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -42,10 +53,16 @@ export const AudioModal: React.FC<Props> = ({ onAssign, onCancel, existingAudio 
 
   const stopRecording = async () => {
     if (!recorderRef.current) return;
-    const dataUrl = await recorderRef.current.stop();
-    recorderRef.current = null;
-    setRecording(false);
-    setPreview(dataUrl);
+    try {
+      const dataUrl = await recorderRef.current.stop();
+      setPreview(dataUrl);
+      setError(null);
+    } catch {
+      setError('Could not save recording.');
+    } finally {
+      recorderRef.current = null;
+      setRecording(false);
+    }
   };
 
   const handlePreview = () => {
@@ -56,80 +73,71 @@ export const AudioModal: React.FC<Props> = ({ onAssign, onCancel, existingAudio 
     if (preview) onAssign(preview);
   };
 
+  const tabItems: TabItem[] = [
+    {
+      id: 'file',
+      label: 'Upload',
+      content: (
+        <div className={styles.section}>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="audio/*"
+            onChange={handleFile}
+            className={styles.fileInput}
+          />
+          <Button variant="secondary" fullWidth onClick={() => fileRef.current?.click()}>
+            <FileUp size={18} aria-hidden />
+            Choose audio file
+          </Button>
+        </div>
+      ),
+    },
+    {
+      id: 'record',
+      label: 'Record',
+      content: (
+        <div className={styles.section}>
+          {!recording ? (
+            <Button variant="secondary" fullWidth onClick={startRecording}>
+              <Mic size={18} aria-hidden />
+              Start recording
+            </Button>
+          ) : (
+            <Button variant="danger" fullWidth onClick={stopRecording}>
+              <Square size={18} aria-hidden />
+              Stop recording
+            </Button>
+          )}
+          {recording && <p className={styles.hint}>Recording… tap Stop when done</p>}
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <div className={styles.backdrop} onClick={onCancel}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <h2 className={styles.title}>Assign Audio</h2>
+    <Modal open title="Assign audio" onClose={onCancel}>
+      <Tabs items={tabItems} value={tab} onChange={(id) => setTab(id as 'file' | 'record')} className={styles.tabs} />
 
-        <div className={styles.tabs}>
-          <button
-            className={`${styles.tab} ${tab === 'file' ? styles.active : ''}`}
-            onClick={() => setTab('file')}
-          >
-            Upload File
-          </button>
-          <button
-            className={`${styles.tab} ${tab === 'record' ? styles.active : ''}`}
-            onClick={() => setTab('record')}
-          >
-            Record
-          </button>
+      {preview && (
+        <div className={styles.previewSection}>
+          <Button variant="link" onClick={handlePreview}>
+            <Play size={16} aria-hidden />
+            Preview
+          </Button>
+          <p className={styles.readyText}>Audio ready</p>
         </div>
+      )}
 
-        <div className={styles.content}>
-          {tab === 'file' && (
-            <div className={styles.fileSection}>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="audio/*"
-                onChange={handleFile}
-                className={styles.fileInput}
-              />
-              <button className={styles.uploadBtn} onClick={() => fileRef.current?.click()}>
-                Choose Audio File
-              </button>
-            </div>
-          )}
+      {error && <p className={styles.error} role="alert">{error}</p>}
 
-          {tab === 'record' && (
-            <div className={styles.recordSection}>
-              {!recording ? (
-                <button className={styles.recordBtn} onClick={startRecording}>
-                  🎙 Start Recording
-                </button>
-              ) : (
-                <button className={`${styles.recordBtn} ${styles.recording}`} onClick={stopRecording}>
-                  ⏹ Stop Recording
-                </button>
-              )}
-              {recording && <p className={styles.hint}>Recording… tap Stop when done</p>}
-            </div>
-          )}
-
-          {preview && (
-            <div className={styles.previewSection}>
-              <button className={styles.previewBtn} onClick={handlePreview}>
-                ▶ Preview
-              </button>
-              <p className={styles.readyText}>Audio ready</p>
-            </div>
-          )}
-
-          {error && <p className={styles.error}>{error}</p>}
-        </div>
-
-        <div className={styles.actions}>
-          <button className={styles.cancelBtn} onClick={onCancel}>Cancel</button>
-          <button
-            className={styles.assignBtn}
-            onClick={handleAssign}
-            disabled={!preview}
-          >
-            Assign
-          </button>
-        </div>
+      <div className={styles.actions}>
+        <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+        <Button onClick={handleAssign} disabled={!preview}>
+          <Upload size={18} aria-hidden />
+          Assign
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 };

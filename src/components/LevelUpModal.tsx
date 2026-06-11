@@ -1,6 +1,9 @@
 import React, { useEffect } from 'react';
+import { Sparkles } from 'lucide-react';
 import { GameLevel, UserProfile, GameConfig } from '../types';
 import { pointsToNextLevel } from '../utils/game';
+import { Modal } from './ui/Modal';
+import { Button } from './ui/Button';
 import styles from './LevelUpModal.module.css';
 
 interface Props {
@@ -13,48 +16,42 @@ interface Props {
 export const LevelUpModal: React.FC<Props> = ({ newLevel, profile, gameConfig, onContinue }) => {
   const { next } = pointsToNextLevel(profile.totalPoints, gameConfig.levels);
 
-  // Auto-dismiss after 6 seconds
   useEffect(() => {
     const t = setTimeout(onContinue, 6000);
     return () => clearTimeout(t);
   }, [onContinue]);
 
   return (
-    <div className={styles.backdrop} onClick={onContinue}>
-      <div className={styles.modal} onClick={e => e.stopPropagation()}>
-        <div className={styles.confetti} aria-hidden>
-          {['🎊','🎉','⭐','✨','🌟','💫'].map((e, i) => (
-            <span key={i} className={styles.confettiPiece} style={{ '--i': i } as React.CSSProperties}>{e}</span>
-          ))}
-        </div>
-
+    <Modal open onClose={onContinue} showClose={false} closeOnScrimClick>
+      <div className={styles.celebration}>
+        <Sparkles className={styles.sparkle} size={32} aria-hidden />
         <div className={styles.levelIcon}>{newLevel.icon}</div>
-        <div className={styles.levelUpText}>Level Up!</div>
-        <div className={styles.levelName}>{newLevel.name}</div>
-        <div className={styles.levelNum}>Level {newLevel.level}</div>
-
-        <div className={styles.statsRow}>
-          <div className={styles.stat}>
-            <div className={styles.statValue}>{profile.totalPoints}</div>
-            <div className={styles.statLabel}>Total points</div>
-          </div>
-          <div className={styles.statDivider} />
-          <div className={styles.stat}>
-            <div className={styles.statValue}>{profile.wordsHeard}</div>
-            <div className={styles.statLabel}>Words heard</div>
-          </div>
-        </div>
-
-        {next && (
-          <p className={styles.nextHint}>
-            Next: {next.icon} {next.name} at {next.minPoints} pts
-          </p>
-        )}
-
-        <button className={styles.continueBtn} onClick={onContinue}>
-          Keep going! ▶
-        </button>
+        <p className={styles.eyebrow}>Level up</p>
+        <h2 className={styles.levelName}>{newLevel.name}</h2>
+        <p className={styles.levelNum}>Level {newLevel.level}</p>
       </div>
-    </div>
+
+      <div className={styles.statsRow}>
+        <div className={styles.stat}>
+          <div className={styles.statValue}>{profile.totalPoints}</div>
+          <div className={styles.statLabel}>Total points</div>
+        </div>
+        <div className={styles.statDivider} />
+        <div className={styles.stat}>
+          <div className={styles.statValue}>{profile.wordsHeard}</div>
+          <div className={styles.statLabel}>Words heard</div>
+        </div>
+      </div>
+
+      {next && (
+        <p className={styles.nextHint}>
+          Next: {next.icon} {next.name} at {next.minPoints} pts
+        </p>
+      )}
+
+      <Button fullWidth onClick={onContinue} className={styles.continueBtn}>
+        Keep going
+      </Button>
+    </Modal>
   );
 };

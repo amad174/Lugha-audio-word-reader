@@ -1,135 +1,79 @@
-.backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 200;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-
-.sheet {
-  background: #16213e;
-  border: 1px solid #0f3460;
-  border-bottom: none;
-  border-radius: 20px 20px 0 0;
-  padding: 12px 16px 40px;
-  width: 100%;
-  max-width: 520px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  animation: slideUp 0.22s ease;
-}
-
-@keyframes slideUp {
-  from { transform: translateY(100%); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-
-.handle {
-  width: 40px;
-  height: 4px;
-  background: #2a3f6f;
-  border-radius: 2px;
-  margin: 0 auto 16px;
-  flex-shrink: 0;
-}
-
-.title {
-  color: #666;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  margin-bottom: 6px;
-  padding: 0 6px;
-}
-
 .menuBtn {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 10px;
-  background: transparent;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  width: 100%;
+  padding: var(--space-xs) 0;
   border: none;
-  border-radius: 12px;
+  background: transparent;
   cursor: pointer;
   text-align: left;
-  width: 100%;
-  transition: background 0.15s;
-  color: #e0e0e0;
+  font-family: inherit;
+  color: var(--color-on-surface);
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
 }
-.menuBtn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.05); }
-.menuBtn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-.menuIcon { font-size: 26px; flex-shrink: 0; line-height: 1; }
+.menuBtn:hover:not(:disabled) {
+  background: var(--color-neutral);
+}
 
-.menuLabel {
-  font-size: 15px;
-  font-weight: 600;
-  color: #fff;
-  line-height: 1.2;
+.menuBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.menuIcon {
+  flex-shrink: 0;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--color-neutral);
+  border-radius: var(--radius-md);
+}
+
+.menuLabel,
+.menuLabelDanger {
+  font: var(--text-label-md);
 }
 
 .menuLabelDanger {
-  font-size: 15px;
-  font-weight: 600;
-  color: #e74c3c;
-  line-height: 1.2;
+  color: var(--color-error);
 }
 
 .menuDesc {
-  font-size: 12px;
-  color: #666;
-  margin-top: 3px;
-  line-height: 1.3;
+  font: var(--text-body-sm);
+  opacity: 0.7;
+  margin-top: 2px;
 }
 
 .divider {
   height: 1px;
-  background: #0f3460;
-  margin: 6px 0;
-  flex-shrink: 0;
+  background: var(--color-muted);
+  margin: var(--space-xs) 0;
+}
+
+.dangerBtn .menuIcon {
+  color: var(--color-error);
+  background: var(--color-error-bg);
 }
 
 .confirmArea {
-  padding: 14px;
-  background: rgba(231, 76, 60, 0.08);
-  border: 1px solid rgba(231, 76, 60, 0.3);
-  border-radius: 12px;
+  padding: var(--space-xs);
+  background: var(--color-error-bg);
+  border-radius: var(--radius-md);
 }
 
 .confirmText {
-  color: #e74c3c;
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  text-align: center;
+  font: var(--text-body-sm);
+  margin: 0 0 var(--space-xs);
 }
 
 .confirmBtns {
   display: flex;
-  gap: 10px;
-}
-
-.confirmCancel,
-.confirmDelete {
-  flex: 1;
-  padding: 11px;
-  border-radius: 8px;
-  border: none;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.confirmCancel {
-  background: #0f3460;
-  color: #ccc;
-}
-
-.confirmDelete {
-  background: #e74c3c;
-  color: #fff;
+  gap: var(--space-xs);
+  justify-content: flex-end;
 }

@@ -14,10 +14,10 @@ export const AchievementToast: React.FC<Props> = ({ achievement, onDismiss }) =>
   }, [onDismiss]);
 
   return (
-    <div className={styles.toast} onClick={onDismiss}>
+    <div className={styles.toast} role="status" onClick={onDismiss}>
       <div className={styles.icon}>{achievement.icon}</div>
       <div className={styles.text}>
-        <div className={styles.label}>Achievement Unlocked!</div>
+        <div className={styles.label}>Achievement unlocked</div>
         <div className={styles.name}>{achievement.name}</div>
       </div>
     </div>

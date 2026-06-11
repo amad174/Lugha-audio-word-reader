@@ -1,13 +1,40 @@
+let currentAudio: HTMLAudioElement | null = null;
+
 /**
  * Play audio from a data URL or object URL.
+ * Stops any in-flight playback first.
  * Returns a promise that resolves when playback ends.
  */
 export function playAudio(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.removeAttribute('src');
+      currentAudio.load();
+      currentAudio = null;
+    }
+
     const audio = new Audio(src);
-    audio.onended = () => resolve();
-    audio.onerror = (e) => reject(e);
-    audio.play().catch(reject);
+    currentAudio = audio;
+
+    audio.onended = () => {
+      if (currentAudio === audio) {
+        currentAudio = null;
+      }
+      resolve();
+    };
+    audio.onerror = (e) => {
+      if (currentAudio === audio) {
+        currentAudio = null;
+      }
+      reject(e);
+    };
+    audio.play().catch((err) => {
+      if (currentAudio === audio) {
+        currentAudio = null;
+      }
+      reject(err);
+    });
   });
 }
 
@@ -39,7 +66,9 @@ export async function recordAudio(): Promise<{ stop: () => Promise<string> }> {
       new Promise((resolve, reject) => {
         recorder.onstop = () => {
           stream.getTracks().forEach((t) => t.stop());
-          const blob = new Blob(chunks, { type: 'audio/webm' });
+          const mimeType =
+            recorder.mimeType || chunks[0]?.type || 'audio/webm';
+          const blob = new Blob(chunks, { type: mimeType });
           const reader = new FileReader();
           reader.onload = (e) => resolve(e.target?.result as string);
           reader.onerror = reject;
