@@ -102,7 +102,7 @@ export function HomePage() {
             </h1>
             <p className={styles.lead}>
               Lugha turns any book into an audio-guided lesson. Teachers build
-              libraries, students listen and learn — all in one calm, focused space.
+              libraries, students listen and learn - all in one calm, focused space.
             </p>
             <div className={styles.heroActions}>
               <Button variant="primary" onClick={() => navigate('/signup')}>
