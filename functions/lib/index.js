@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.refreshUserClaims = exports.uploadStorageFile = void 0;
+exports.refreshUserClaims = exports.downloadStorageFile = exports.uploadStorageFile = void 0;
 const crypto_1 = require("crypto");
 const admin = __importStar(require("firebase-admin"));
 const https_1 = require("firebase-functions/v2/https");
@@ -98,6 +98,53 @@ exports.uploadStorageFile = (0, https_1.onCall)({ invoker: 'public', memory: '51
             throw err;
         console.error('uploadStorageFile failed', err);
         throw new https_1.HttpsError('internal', 'Upload failed on server.');
+    }
+});
+/**
+ * Read a file from Storage using the Admin SDK and return it base64-encoded.
+ *
+ * The browser cannot fetch() Storage download URLs unless CORS is configured on
+ * the bucket (<img> tags work, but XHR/fetch is blocked). Book export needs to
+ * read page images and audio back out, so it routes through here — mirroring
+ * uploadStorageFile — which works regardless of bucket CORS.
+ */
+exports.downloadStorageFile = (0, https_1.onCall)({ invoker: 'public', memory: '512MiB', timeoutSeconds: 120 }, async (request) => {
+    var _a;
+    try {
+        if (!request.auth) {
+            throw new https_1.HttpsError('unauthenticated', 'Sign in required.');
+        }
+        const { path } = request.data;
+        if (!path || typeof path !== 'string') {
+            throw new https_1.HttpsError('invalid-argument', 'path is required.');
+        }
+        const orgId = orgIdFromPath(path);
+        if (!orgId) {
+            throw new https_1.HttpsError('invalid-argument', 'Invalid storage path.');
+        }
+        await requireTeacher(request.auth.uid, orgId);
+        const file = bucket.file(path);
+        const [exists] = await file.exists();
+        if (!exists) {
+            throw new https_1.HttpsError('not-found', 'File not found.');
+        }
+        // Callable responses are capped at ~10MB; base64 inflates by ~33%.
+        const [metadata] = await file.getMetadata();
+        const size = Number((_a = metadata.size) !== null && _a !== void 0 ? _a : 0);
+        if (size > 6 * 1024 * 1024) {
+            throw new https_1.HttpsError('resource-exhausted', 'File too large to export.');
+        }
+        const [buffer] = await file.download();
+        return {
+            contentType: metadata.contentType || 'application/octet-stream',
+            dataBase64: buffer.toString('base64'),
+        };
+    }
+    catch (err) {
+        if (err instanceof https_1.HttpsError)
+            throw err;
+        console.error('downloadStorageFile failed', err);
+        throw new https_1.HttpsError('internal', 'Download failed on server.');
     }
 });
 exports.refreshUserClaims = (0, https_1.onCall)({ invoker: 'public' }, async (request) => {
