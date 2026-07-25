@@ -83,6 +83,60 @@ export const uploadStorageFile = onCall(
   }
 );
 
+/**
+ * Read a file from Storage using the Admin SDK and return it base64-encoded.
+ *
+ * The browser cannot fetch() Storage download URLs unless CORS is configured on
+ * the bucket (<img> tags work, but XHR/fetch is blocked). Book export needs to
+ * read page images and audio back out, so it routes through here — mirroring
+ * uploadStorageFile — which works regardless of bucket CORS.
+ */
+export const downloadStorageFile = onCall(
+  { invoker: 'public', memory: '512MiB', timeoutSeconds: 120 },
+  async (request) => {
+    try {
+      if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Sign in required.');
+      }
+
+      const { path } = request.data as { path: string };
+      if (!path || typeof path !== 'string') {
+        throw new HttpsError('invalid-argument', 'path is required.');
+      }
+
+      const orgId = orgIdFromPath(path);
+      if (!orgId) {
+        throw new HttpsError('invalid-argument', 'Invalid storage path.');
+      }
+
+      await requireTeacher(request.auth.uid, orgId);
+
+      const file = bucket.file(path);
+      const [exists] = await file.exists();
+      if (!exists) {
+        throw new HttpsError('not-found', 'File not found.');
+      }
+
+      // Callable responses are capped at ~10MB; base64 inflates by ~33%.
+      const [metadata] = await file.getMetadata();
+      const size = Number(metadata.size ?? 0);
+      if (size > 6 * 1024 * 1024) {
+        throw new HttpsError('resource-exhausted', 'File too large to export.');
+      }
+
+      const [buffer] = await file.download();
+      return {
+        contentType: metadata.contentType || 'application/octet-stream',
+        dataBase64: buffer.toString('base64'),
+      };
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      console.error('downloadStorageFile failed', err);
+      throw new HttpsError('internal', 'Download failed on server.');
+    }
+  }
+);
+
 export const refreshUserClaims = onCall({ invoker: 'public' }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Must be signed in.');

@@ -19,6 +19,7 @@ import {
   audioPath,
   deleteStoragePath,
   deleteBookStorage,
+  downloadToDataUrl,
 } from './storageService';
 import { pdfToDataUrls, countPdfPages } from '../utils/pdf';
 import { dataUrlFromFile } from './storageService';
@@ -222,17 +223,7 @@ export async function importBundleToBook(
   });
 }
 
-async function urlToDataUrl(url: string): Promise<string> {
-  if (url.startsWith('data:')) return url;
-  const res = await fetch(url);
-  const blob = await res.blob();
-  return new Promise<string>((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result as string);
-    r.onerror = reject;
-    r.readAsDataURL(blob);
-  });
-}
+const urlToDataUrl = downloadToDataUrl;
 
 export async function exportBookBundle(
   orgId: string,

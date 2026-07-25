@@ -1,29 +1,34 @@
 let currentAudio: HTMLAudioElement | null = null;
 
 /**
- * Cache of remote audio downloaded ahead of time (src -> object URL).
- * Playing from a local object URL removes the network round-trip on tap.
+ * Audio elements kept alive so the browser fetches and buffers each clip ahead
+ * of the first tap. Media elements are not subject to CORS the way fetch() is,
+ * so this warms the HTTP cache even though the Storage bucket blocks XHR.
  */
-const preloadCache = new Map<string, string>();
-const preloadInFlight = new Map<string, Promise<void>>();
+const preloaded = new Map<string, HTMLAudioElement>();
+
+function isPreloadedElement(el: HTMLAudioElement): boolean {
+  for (const cached of Array.from(preloaded.values())) {
+    if (cached === el) return true;
+  }
+  return false;
+}
 
 export function preloadAudio(srcs: string[]): void {
   for (const src of srcs) {
-    if (!src || src.startsWith('data:') || preloadCache.has(src) || preloadInFlight.has(src)) {
-      continue;
-    }
-    const p = fetch(src)
-      .then(res => res.blob())
-      .then(blob => {
-        preloadCache.set(src, URL.createObjectURL(blob));
-      })
-      .catch(() => {
-        // Preload is best-effort; playback falls back to the remote URL.
-      })
-      .finally(() => {
-        preloadInFlight.delete(src);
-      });
-    preloadInFlight.set(src, p);
+    if (!src || preloaded.has(src)) continue;
+    const el = new Audio();
+    el.preload = 'auto';
+    el.src = src;
+    // Kick off buffering; errors are ignored since playback retries on tap.
+    el.load();
+    preloaded.set(src, el);
+  }
+
+  // Keep the cache bounded — a long book would otherwise accumulate elements.
+  if (preloaded.size > 120) {
+    const excess = preloaded.size - 120;
+    Array.from(preloaded.keys()).slice(0, excess).forEach(k => preloaded.delete(k));
   }
 }
 
@@ -35,13 +40,29 @@ export function preloadAudio(srcs: string[]): void {
 export function playAudio(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
     if (currentAudio) {
-      currentAudio.pause();
-      currentAudio.removeAttribute('src');
-      currentAudio.load();
+      const prev = currentAudio;
+      prev.pause();
+      prev.onended = null;
+      prev.onerror = null;
+      // Only tear down ad-hoc elements. Preloaded ones must keep their buffered
+      // src so the next tap on that word is still instant.
+      if (!isPreloadedElement(prev)) {
+        prev.removeAttribute('src');
+        prev.load();
+      }
       currentAudio = null;
     }
 
-    const audio = new Audio(preloadCache.get(src) ?? src);
+    // Reuse the buffered element when we have one so playback starts instantly.
+    const preloadedEl = preloaded.get(src);
+    const audio = preloadedEl ?? new Audio(src);
+    if (preloadedEl) {
+      try {
+        preloadedEl.currentTime = 0;
+      } catch {
+        // Not seekable yet — it will still play from the start.
+      }
+    }
     currentAudio = audio;
 
     audio.onended = () => {

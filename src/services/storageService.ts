@@ -159,6 +159,58 @@ export async function deleteBookStorage(orgId: string, bookId: string): Promise<
   await deleteStoragePath(`${base}/cover.jpg`);
 }
 
+/** Extract the Storage object path from a Firebase download URL. */
+export function storagePathFromUrl(url: string): string | null {
+  const match = /\/o\/([^?]+)/.exec(url);
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
+}
+
+async function downloadViaCallable(path: string): Promise<string> {
+  const fn = httpsCallable<{ path: string }, { contentType: string; dataBase64: string }>(
+    functions,
+    'downloadStorageFile'
+  );
+  const result = await fn({ path });
+  return `data:${result.data.contentType};base64,${result.data.dataBase64}`;
+}
+
+/**
+ * Read a stored file back as a data URL.
+ *
+ * Tries a direct fetch first — that only succeeds if CORS is configured on the
+ * bucket. Browsers block fetch/XHR on Storage URLs by default (even though
+ * <img src> works), so we fall back to the downloadStorageFile function.
+ */
+export async function downloadToDataUrl(url: string): Promise<string> {
+  if (url.startsWith('data:')) return url;
+
+  try {
+    const res = await fetch(url);
+    if (res.ok) {
+      const blob = await res.blob();
+      return await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result as string);
+        r.onerror = reject;
+        r.readAsDataURL(blob);
+      });
+    }
+  } catch {
+    // CORS or network failure — fall through to the callable below.
+  }
+
+  const path = storagePathFromUrl(url);
+  if (!path) {
+    throw new Error('Could not read stored file (unrecognized URL).');
+  }
+  return downloadViaCallable(path);
+}
+
 export async function dataUrlFromFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
