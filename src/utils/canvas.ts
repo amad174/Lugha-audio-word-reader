@@ -4,6 +4,24 @@ const PRIMARY = '#20614c';
 const ERROR = '#d94b4b';
 const UNMAPPED = '#6d9189';
 
+function roundRectPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+): void {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+}
+
 export function drawBoxes(
   canvas: HTMLCanvasElement,
   boxes: BoundingBox[],
@@ -13,7 +31,8 @@ export function drawBoxes(
   scaleX: number,
   scaleY: number,
   drawPreview?: { x: number; y: number; w: number; h: number } | null,
-  deleteMode = false
+  deleteMode = false,
+  playMode = false
 ): void {
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -29,6 +48,29 @@ export function drawBoxes(
     const rh = box.h * scaleY;
 
     ctx.save();
+
+    if (playMode && !deleteMode) {
+      // Reading view: soft rounded highlights that don't obscure the page.
+      if (isSelected || isHovered) {
+        ctx.strokeStyle = 'rgba(32,97,76,0.55)';
+        ctx.lineWidth = 2;
+        ctx.fillStyle = 'rgba(32,97,76,0.16)';
+      } else if (isMapped) {
+        ctx.strokeStyle = 'rgba(32,97,76,0.22)';
+        ctx.lineWidth = 1;
+        ctx.fillStyle = 'rgba(32,97,76,0.07)';
+      } else {
+        // Teacher previewing play mode: hint at boxes still missing audio.
+        ctx.strokeStyle = 'rgba(109,145,137,0.3)';
+        ctx.lineWidth = 1;
+        ctx.fillStyle = 'rgba(109,145,137,0.04)';
+      }
+      roundRectPath(ctx, rx, ry, rw, rh, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+      continue;
+    }
 
     if (deleteMode && isHovered) {
       ctx.strokeStyle = ERROR;
@@ -52,12 +94,13 @@ export function drawBoxes(
       ctx.fillStyle = 'rgba(109,145,137,0.06)';
     }
 
-    ctx.fillRect(rx, ry, rw, rh);
-    ctx.strokeRect(rx, ry, rw, rh);
+    roundRectPath(ctx, rx, ry, rw, rh, 6);
+    ctx.fill();
+    ctx.stroke();
 
     if (isMapped && !deleteMode) {
       ctx.beginPath();
-      ctx.arc(rx + rw - 5, ry + 5, 4, 0, Math.PI * 2);
+      ctx.arc(rx + rw - 6, ry + 6, 4, 0, Math.PI * 2);
       ctx.fillStyle = PRIMARY;
       ctx.fill();
     }

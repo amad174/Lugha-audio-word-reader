@@ -127,3 +127,48 @@
   gap: var(--space-xs);
   justify-content: center;
 }
+
+/* One-time student hint: how to tap words */
+.tapHintOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-sm);
+  background: rgba(23, 23, 23, 0.45);
+  animation: tapHintFade 0.25s ease;
+}
+
+.tapHintCard {
+  max-width: 360px;
+  width: 100%;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(23, 23, 23, 0.25);
+}
+
+.tapHintIcon {
+  font-size: 44px;
+  margin-bottom: var(--space-xs);
+}
+
+.tapHintTitle {
+  font: var(--text-headline-sm);
+  font-family: var(--font-display);
+  margin-bottom: var(--space-xs);
+}
+
+.tapHintBody {
+  font: var(--text-body-md);
+  color: #6b7280;
+  margin-bottom: var(--space-sm);
+}
+
+@keyframes tapHintFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

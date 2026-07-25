@@ -17,6 +17,7 @@ import {
   exportBookBundle,
   listPages,
 } from '../services/bookService';
+import { clearCache } from '../utils/cache';
 import styles from './LibraryPage.module.css';
 
 export function BookEditPage() {
@@ -31,6 +32,7 @@ export function BookEditPage() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState<string>('');
   const [importing, setImporting] = useState<{ current: number; total: number } | null>(null);
+  const [exporting, setExporting] = useState<{ current: number; total: number } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -106,11 +108,26 @@ export function BookEditPage() {
 
   const handleDeleteBook = async () => {
     await deleteBookWithStorage(orgId, bookId);
+    clearCache(`library:${orgId}`);
+    clearCache(`book:${bookId}`);
     navigate('/library');
   };
 
   const handleExport = async () => {
-    if (book) await exportBookBundle(orgId, bookId, book.title);
+    if (!book) return;
+    setError('');
+    setSuccess('');
+    setExporting({ current: 0, total: 1 });
+    try {
+      await exportBookBundle(orgId, bookId, book.title, (cur, tot) =>
+        setExporting({ current: cur, total: tot })
+      );
+      setSuccess('Backup downloaded. Keep it somewhere safe — it contains all pages, boxes, and recordings.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed.');
+    } finally {
+      setExporting(null);
+    }
   };
 
   const closeDeleteModal = useCallback(() => setConfirmDelete(false), []);
@@ -182,8 +199,8 @@ export function BookEditPage() {
               <BookOpen size={16} aria-hidden /> Open book
             </Button>
           )}
-          <Button variant="secondary" onClick={handleExport} disabled={pages.length === 0}>
-            <Download size={16} aria-hidden /> Export
+          <Button variant="secondary" onClick={handleExport} disabled={pages.length === 0 || !!exporting} title="Download a backup file with all pages, boxes, and recordings">
+            <Download size={16} aria-hidden /> {exporting ? 'Exporting…' : 'Export backup'}
           </Button>
           <Button variant="danger" onClick={() => setConfirmDelete(true)}>
             <Trash2 size={16} aria-hidden /> Delete book
@@ -193,6 +210,12 @@ export function BookEditPage() {
         {importing && (
           <p className={styles.bookMeta} role="status">
             Importing page {importing.current} of {importing.total}…
+          </p>
+        )}
+
+        {exporting && (
+          <p className={styles.bookMeta} role="status">
+            Preparing backup… {exporting.current} of {exporting.total}
           </p>
         )}
 

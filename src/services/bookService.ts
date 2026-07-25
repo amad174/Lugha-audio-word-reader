@@ -189,8 +189,13 @@ export async function importBundleToBook(
   orgId: string,
   bookId: string,
   pages: StoredPage[],
-  mappings: AudioMapping
+  mappings: AudioMapping,
+  onProgress?: (current: number, total: number) => void
 ): Promise<void> {
+  const audioEntries = Object.entries(mappings);
+  const total = pages.length + audioEntries.length;
+  let done = 0;
+
   for (let i = 0; i < pages.length; i++) {
     const p = pages[i];
     const imageUrl = await uploadDataUrl(pageImagePath(orgId, bookId, p.id), p.dataUrl);
@@ -200,10 +205,14 @@ export async function importBundleToBook(
       imageUrl,
       boxes: p.boxes,
     });
+    onProgress?.(++done, total);
   }
 
-  for (const [boxId, dataUrl] of Object.entries(mappings)) {
+  for (const [boxId, src] of audioEntries) {
+    // Older backups stored remote URLs; fetch them so upload always gets a data URL.
+    const dataUrl = src.startsWith('data:') ? src : await urlToDataUrl(src);
     await assignAudio(orgId, bookId, boxId, dataUrl);
+    onProgress?.(++done, total);
   }
 
   const bookPages = await listPages(orgId, bookId);
@@ -213,25 +222,50 @@ export async function importBundleToBook(
   });
 }
 
-export async function exportBookBundle(orgId: string, bookId: string, title: string) {
+async function urlToDataUrl(url: string): Promise<string> {
+  if (url.startsWith('data:')) return url;
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+
+export async function exportBookBundle(
+  orgId: string,
+  bookId: string,
+  title: string,
+  onProgress?: (current: number, total: number) => void
+) {
   const pages = await listPages(orgId, bookId);
   const mappings = await loadAudioMapping(orgId, bookId);
 
-  const storedPages: StoredPage[] = await Promise.all(
-    pages.map(async p => {
-      const res = await fetch(p.imageUrl);
-      const blob = await res.blob();
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(r.result as string);
-        r.onerror = reject;
-        r.readAsDataURL(blob);
-      });
-      return { id: p.id, dataUrl, name: p.name, boxes: p.boxes };
-    })
-  );
+  const audioEntries = Object.entries(mappings);
+  const total = pages.length + audioEntries.length;
+  let done = 0;
 
-  const bundle = { version: 2, title, pages: storedPages, mappings };
+  const storedPages: StoredPage[] = [];
+  for (const p of pages) {
+    const dataUrl = await urlToDataUrl(p.imageUrl);
+    storedPages.push({ id: p.id, dataUrl, name: p.name, boxes: p.boxes });
+    onProgress?.(++done, total);
+  }
+
+  // Embed recordings as data URLs so the backup is fully self-contained.
+  const storedMappings: AudioMapping = {};
+  for (const [boxId, url] of audioEntries) {
+    try {
+      storedMappings[boxId] = await urlToDataUrl(url);
+    } catch {
+      // Skip recordings that can no longer be fetched rather than failing the whole export.
+    }
+    onProgress?.(++done, total);
+  }
+
+  const bundle = { version: 2, title, pages: storedPages, mappings: storedMappings };
   const blob = new Blob([JSON.stringify(bundle)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

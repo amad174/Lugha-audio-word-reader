@@ -55,6 +55,51 @@
   cursor: crosshair;
 }
 
+.pageNavBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-muted);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--color-primary);
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(23, 23, 23, 0.15);
+  transition: background var(--transition-fast), transform var(--transition-fast), opacity var(--transition-fast);
+  opacity: 0.85;
+}
+
+.pageNavBtn:hover {
+  background: var(--color-surface);
+  opacity: 1;
+}
+
+.pageNavBtn:active {
+  transform: translateY(-50%) scale(0.94);
+}
+
+.pageNavPrev {
+  left: 8px;
+}
+
+.pageNavNext {
+  right: 8px;
+}
+
+@media (max-width: 640px) {
+  .pageNavBtn {
+    width: 40px;
+    height: 40px;
+    opacity: 0.75;
+  }
+}
+
 .stats {
   width: 100%;
   max-width: 900px;

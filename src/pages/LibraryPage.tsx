@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FolderOpen, Users, User, Upload } from 'lucide-react';
+import { Plus, FolderOpen, Users, User, Upload, FileUp } from 'lucide-react';
 import { useAuthContext } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -10,15 +10,26 @@ import { listBooks, listCategories, createBook, createCategory } from '../servic
 import { getProgress, getGameConfig } from '../services/progressService';
 import { getLevelForPoints, pointsToNextLevel, DEFAULT_GAME_CONFIG } from '../utils/game';
 import { hasLocalData } from '../services/localMigrationService';
+import { getCache, setCache } from '../utils/cache';
+import { importBundleToBook } from '../services/bookService';
+import { BookBundle } from '../types';
 import styles from './LibraryPage.module.css';
+
+interface LibraryCache {
+  books: Book[];
+  categories: Category[];
+}
 
 export function LibraryPage() {
   const { user, org, isTeacher } = useAuthContext();
   const navigate = useNavigate();
 
-  const [books, setBooks] = useState<Book[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const orgIdInit = user?.orgId ?? '';
+  const cached = getCache<LibraryCache>(`library:${orgIdInit}`);
+
+  const [books, setBooks] = useState<Book[]>(cached?.books ?? []);
+  const [categories, setCategories] = useState<Category[]>(cached?.categories ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [showNewBook, setShowNewBook] = useState(false);
   const [newBookTitle, setNewBookTitle] = useState('');
   const [newBookCategory, setNewBookCategory] = useState('');
@@ -29,12 +40,14 @@ export function LibraryPage() {
   const [progressLevel, setProgressLevel] = useState('');
   const [localDataExists, setLocalDataExists] = useState(false);
   const [gameConfig, setGameConfig] = useState(DEFAULT_GAME_CONFIG);
+  const [restoring, setRestoring] = useState<{ current: number; total: number } | null>(null);
+  const restoreFileRef = useRef<HTMLInputElement>(null);
 
   const orgId = user?.orgId ?? '';
 
   const load = useCallback(async () => {
     if (!orgId) return;
-    setLoading(true);
+    if (!getCache<LibraryCache>(`library:${orgId}`)) setLoading(true);
     try {
       const [b, c, gc] = await Promise.all([
         listBooks(orgId),
@@ -44,6 +57,7 @@ export function LibraryPage() {
       setBooks(b);
       setCategories(c);
       setGameConfig(gc);
+      setCache<LibraryCache>(`library:${orgId}`, { books: b, categories: c });
 
       if (user?.role === 'student') {
         const p = await getProgress(orgId, user.uid);
@@ -105,6 +119,32 @@ export function LibraryPage() {
     }
   };
 
+  const handleRestoreFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !user) return;
+    setError('');
+    try {
+      const text = await file.text();
+      const bundle = JSON.parse(text) as BookBundle;
+      if (!bundle || !Array.isArray(bundle.pages) || !bundle.title) {
+        throw new Error('Not a valid Lugha backup file.');
+      }
+      const audioCount = Object.keys(bundle.mappings ?? {}).length;
+      setRestoring({ current: 0, total: bundle.pages.length + audioCount });
+      const book = await createBook(orgId, bundle.title, null, user.uid);
+      await importBundleToBook(orgId, book.id, bundle.pages, bundle.mappings ?? {}, (cur, tot) =>
+        setRestoring({ current: cur, total: tot })
+      );
+      setRestoring(null);
+      await load();
+      navigate(`/library/${book.id}/edit`);
+    } catch (err) {
+      setRestoring(null);
+      setError(err instanceof Error ? err.message : 'Restore failed. Is this a Lugha backup file?');
+    }
+  };
+
   const booksByCategory = (categoryId: string | null) =>
     books.filter(b => (categoryId ? b.categoryId === categoryId : !b.categoryId));
 
@@ -143,6 +183,9 @@ export function LibraryPage() {
                   <Upload size={16} aria-hidden /> Import local
                 </Button>
               )}
+              <Button variant="secondary" size="sm" onClick={() => restoreFileRef.current?.click()} disabled={!!restoring} title="Restore a book from a Lugha backup file">
+                <FileUp size={16} aria-hidden /> Restore backup
+              </Button>
               <Button size="sm" onClick={() => setShowNewBook(true)}>
                 <Plus size={16} aria-hidden /> Add book
               </Button>
@@ -167,6 +210,20 @@ export function LibraryPage() {
       )}
 
       {error && <p className={styles.emptyDesc} role="alert">{error}</p>}
+
+      {restoring && (
+        <p className={styles.emptyDesc} role="status">
+          Restoring backup… {restoring.current} of {restoring.total}
+        </p>
+      )}
+
+      <input
+        ref={restoreFileRef}
+        type="file"
+        accept=".json,application/json"
+        hidden
+        onChange={handleRestoreFile}
+      />
 
       {books.length === 0 ? (
         <div className={styles.empty}>

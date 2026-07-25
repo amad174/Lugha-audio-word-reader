@@ -1,6 +1,33 @@
 let currentAudio: HTMLAudioElement | null = null;
 
 /**
+ * Cache of remote audio downloaded ahead of time (src -> object URL).
+ * Playing from a local object URL removes the network round-trip on tap.
+ */
+const preloadCache = new Map<string, string>();
+const preloadInFlight = new Map<string, Promise<void>>();
+
+export function preloadAudio(srcs: string[]): void {
+  for (const src of srcs) {
+    if (!src || src.startsWith('data:') || preloadCache.has(src) || preloadInFlight.has(src)) {
+      continue;
+    }
+    const p = fetch(src)
+      .then(res => res.blob())
+      .then(blob => {
+        preloadCache.set(src, URL.createObjectURL(blob));
+      })
+      .catch(() => {
+        // Preload is best-effort; playback falls back to the remote URL.
+      })
+      .finally(() => {
+        preloadInFlight.delete(src);
+      });
+    preloadInFlight.set(src, p);
+  }
+}
+
+/**
  * Play audio from a data URL or object URL.
  * Stops any in-flight playback first.
  * Returns a promise that resolves when playback ends.
@@ -14,7 +41,7 @@ export function playAudio(src: string): Promise<void> {
       currentAudio = null;
     }
 
-    const audio = new Audio(src);
+    const audio = new Audio(preloadCache.get(src) ?? src);
     currentAudio = audio;
 
     audio.onended = () => {

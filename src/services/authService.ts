@@ -4,6 +4,10 @@ import {
   signOut,
   sendPasswordResetEmail,
   updateProfile,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  deleteUser,
   User as FirebaseUser,
 } from 'firebase/auth';
 import {
@@ -173,6 +177,67 @@ export async function logOut(): Promise<void> {
 
 export async function resetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email);
+}
+
+async function reauthenticate(currentPassword: string): Promise<FirebaseUser> {
+  const u = auth.currentUser;
+  if (!u?.email) throw new Error('Not signed in.');
+  try {
+    await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, currentPassword));
+  } catch {
+    throw new Error('Current password is incorrect.');
+  }
+  return u;
+}
+
+/** Change password in-app; requires the current password for verification. */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  const u = await reauthenticate(currentPassword);
+  await updatePassword(u, newPassword);
+}
+
+/** Update display name in Auth, the user profile, and the org member record. */
+export async function updateDisplayName(name: string): Promise<void> {
+  const u = auth.currentUser;
+  if (!u) throw new Error('Not signed in.');
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error('Name cannot be empty.');
+
+  await updateProfile(u, { displayName: trimmed });
+
+  const snap = await getDoc(doc(db, 'users', u.uid));
+  const orgId = snap.exists() ? (snap.data().orgId as string | undefined) : undefined;
+
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'users', u.uid), { displayName: trimmed });
+  if (orgId) {
+    batch.update(doc(db, 'orgs', orgId, 'members', u.uid), { displayName: trimmed });
+  }
+  await batch.commit();
+}
+
+/**
+ * Permanently delete the signed-in account after password confirmation.
+ * Removes profile, org membership, and student progress. Books and the
+ * organization itself are left intact.
+ */
+export async function deleteAccount(currentPassword: string): Promise<void> {
+  const u = await reauthenticate(currentPassword);
+
+  const snap = await getDoc(doc(db, 'users', u.uid));
+  const data = snap.exists() ? snap.data() : null;
+
+  const batch = writeBatch(db);
+  batch.delete(doc(db, 'users', u.uid));
+  if (data?.orgId) {
+    batch.delete(doc(db, 'orgs', data.orgId, 'members', u.uid));
+    if (data.role === 'student') {
+      batch.delete(doc(db, 'orgs', data.orgId, 'progress', u.uid));
+    }
+  }
+  await batch.commit();
+
+  await deleteUser(u);
 }
 
 export async function getOrganization(orgId: string) {

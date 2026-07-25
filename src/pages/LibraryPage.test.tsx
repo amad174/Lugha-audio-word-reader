@@ -31,7 +31,12 @@ jest.mock('../services/localMigrationService', () => ({
   hasLocalData: jest.fn(),
 }));
 
+jest.mock('../services/bookService', () => ({
+  importBundleToBook: jest.fn(),
+}));
+
 import { useAuthContext } from '../contexts/AuthContext';
+import { clearCache } from '../utils/cache';
 import { listBooks, listCategories, createBook } from '../services/libraryService';
 import { getGameConfig } from '../services/progressService';
 import { hasLocalData } from '../services/localMigrationService';
@@ -70,6 +75,7 @@ function renderLibrary() {
 describe('LibraryPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    clearCache();
     mockGetGameConfig.mockResolvedValue({ levels: [] });
     mockHasLocalData.mockResolvedValue(false);
     mockListCategories.mockResolvedValue([]);

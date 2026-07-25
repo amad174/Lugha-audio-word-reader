@@ -1,4 +1,5 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { BoundingBox, AudioMapping, AppMode } from '../types';
 import { drawBoxes } from '../utils/canvas';
 import { getBoxHash } from '../utils/hash';
@@ -24,6 +25,8 @@ interface Props {
   onBoxDelete: (id: string) => void;
   onWordHeard?: (boxId: string) => void;
   onSwipe?: (dir: 'left' | 'right') => void;
+  onPrevPage?: () => void;
+  onNextPage?: () => void;
 }
 
 interface DrawState {
@@ -46,9 +49,15 @@ function syncOverlayCanvas(overlay: HTMLCanvasElement, metrics: PageMetrics) {
 }
 
 export const PageViewer: React.FC<Props> = ({
-  imageSrc, mappings, mode, boxes, isAdmin,
+  imageSrc, mappings, mode, boxes: allBoxes, isAdmin,
   onBoxClick, onBoxAdd, onBoxDelete, onWordHeard, onSwipe,
+  onPrevPage, onNextPage,
 }) => {
+  // Students only see (and can tap) boxes that actually have audio.
+  const boxes = useMemo(
+    () => (!isAdmin && mode === 'play' ? allBoxes.filter(b => mappings[b.id]) : allBoxes),
+    [allBoxes, isAdmin, mode, mappings]
+  );
   const imgRef = useRef<HTMLImageElement>(null);
   const imageCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
@@ -123,7 +132,10 @@ export const PageViewer: React.FC<Props> = ({
         }
       : null;
 
-    drawBoxes(overlay, boxes, mappings, hoveredId, selectedId, m.scaleX, m.scaleY, preview, mode === 'delete');
+    drawBoxes(
+      overlay, boxes, mappings, hoveredId, selectedId, m.scaleX, m.scaleY, preview,
+      mode === 'delete', mode === 'play'
+    );
   }, [boxes, mappings, hoveredId, selectedId, metrics, draw, mode]);
 
   const finishDraw = useCallback((state: DrawState) => {
@@ -287,14 +299,36 @@ export const PageViewer: React.FC<Props> = ({
             if (!draw.active) setHoveredId(null);
           }}
         />
+        {onPrevPage && mode !== 'draw' && (
+          <button
+            type="button"
+            className={`${styles.pageNavBtn} ${styles.pageNavPrev}`}
+            onClick={onPrevPage}
+            aria-label="Previous page"
+          >
+            <ChevronLeft size={26} aria-hidden />
+          </button>
+        )}
+        {onNextPage && mode !== 'draw' && (
+          <button
+            type="button"
+            className={`${styles.pageNavBtn} ${styles.pageNavNext}`}
+            onClick={onNextPage}
+            aria-label="Next page"
+          >
+            <ChevronRight size={26} aria-hidden />
+          </button>
+        )}
       </div>
       <div className={styles.stats}>
         {mode === 'draw' ? 'Drag to draw a box around a letter or word'
           : mode === 'delete' ? 'Tap a box to delete it'
           : mode === 'assign' ? 'Tap a box to assign audio'
           : boxes.length > 0
-          ? `${boxes.length} boxes · ${boxes.filter(b => mappings[b.id]).length} with audio · tap to listen`
-          : isAdmin ? 'Switch to Draw mode to add boxes' : 'No boxes yet — ask your teacher to set up this page'}
+          ? isAdmin
+            ? `${boxes.length} boxes · ${boxes.filter(b => mappings[b.id]).length} with audio · tap to listen`
+            : '🔊 Tap a highlighted word to hear it'
+          : isAdmin ? 'Switch to Draw mode to add boxes' : 'No words to listen to on this page yet'}
       </div>
     </div>
   );

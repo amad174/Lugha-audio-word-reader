@@ -15,17 +15,20 @@ jest.mock('../services/libraryService', () => ({
   createCategory: jest.fn(),
   updateCategory: jest.fn(),
   deleteCategory: jest.fn(),
+  listBooks: jest.fn(),
 }));
 
-import { listCategories, createCategory } from '../services/libraryService';
+import { listCategories, createCategory, listBooks } from '../services/libraryService';
 
 const mockListCategories = listCategories as jest.Mock;
 const mockCreateCategory = createCategory as jest.Mock;
+const mockListBooks = listBooks as jest.Mock;
 
 describe('TeacherCategoriesPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockListCategories.mockResolvedValue([]);
+    mockListBooks.mockResolvedValue([]);
   });
 
   test('renders categories page', async () => {
@@ -36,7 +39,7 @@ describe('TeacherCategoriesPage', () => {
     );
 
     expect(await screen.findByRole('heading', { name: /categories/i })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('New category name')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/new category name/i)).toBeInTheDocument();
   });
 
   test('add category calls service', async () => {
@@ -51,7 +54,7 @@ describe('TeacherCategoriesPage', () => {
       </MemoryRouter>
     );
 
-    await userEvent.type(await screen.findByPlaceholderText('New category name'), 'Level 1');
+    await userEvent.type(await screen.findByPlaceholderText(/new category name/i), 'Level 1');
     await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
 
     await waitFor(() => {

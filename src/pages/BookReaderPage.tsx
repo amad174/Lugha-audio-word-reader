@@ -20,7 +20,17 @@ import {
 } from '../services/bookService';
 import { recordWordHeard, getGameConfig } from '../services/progressService';
 import { DEFAULT_GAME_CONFIG } from '../utils/game';
+import { getCache, setCache } from '../utils/cache';
+import { preloadAudio } from '../utils/audio';
 import '../App.css';
+
+interface ReaderCache {
+  bookTitle: string;
+  pages: BookPage[];
+  mappings: AudioMapping;
+}
+
+const TAP_HINT_KEY = 'lugha_tap_hint_dismissed';
 
 export function BookReaderPage() {
   const { bookId = '' } = useParams();
@@ -28,12 +38,15 @@ export function BookReaderPage() {
   const { user, isTeacher } = useAuthContext();
   const orgId = user?.orgId ?? '';
 
-  const [bookTitle, setBookTitle] = useState('');
-  const [pages, setPages] = useState<BookPage[]>([]);
-  const [mappings, setMappings] = useState<AudioMapping>({});
+  const cached = getCache<ReaderCache>(`book:${bookId}`);
+
+  const [bookTitle, setBookTitle] = useState(cached?.bookTitle ?? '');
+  const [pages, setPages] = useState<BookPage[]>(cached?.pages ?? []);
+  const [mappings, setMappings] = useState<AudioMapping>(cached?.mappings ?? {});
   const [currentIdx, setCurrentIdx] = useState(0);
   const [mode, setMode] = useState<AppMode>(() => (isTeacher ? 'draw' : 'play'));
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cached);
+  const [showTapHint, setShowTapHint] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingBox, setPendingBox] = useState<BoundingBox | null>(null);
   const [levelUpData, setLevelUpData] = useState<GameLevel | null>(null);
@@ -48,7 +61,7 @@ export function BookReaderPage() {
 
   const loadBook = useCallback(async () => {
     if (!orgId || !bookId) return;
-    setLoading(true);
+    if (!getCache<ReaderCache>(`book:${bookId}`)) setLoading(true);
     try {
       const [book, p, m, gc] = await Promise.all([
         getBook(orgId, bookId),
@@ -64,6 +77,7 @@ export function BookReaderPage() {
       setPages(p);
       setMappings(m);
       setGameConfig(gc);
+      setCache<ReaderCache>(`book:${bookId}`, { bookTitle: book.title, pages: p, mappings: m });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load book.');
     } finally {
@@ -74,6 +88,42 @@ export function BookReaderPage() {
   useEffect(() => { loadBook(); }, [loadBook]);
   useEffect(() => { heardThisSession.current.clear(); }, [currentIdx]);
   useEffect(() => { if (!isTeacher) setMode('play'); }, [isTeacher]);
+
+  // Preload the current page's recordings so tapping a word plays instantly,
+  // and warm up neighbouring page images so page turns feel immediate.
+  useEffect(() => {
+    const page = pages[currentIdx];
+    if (!page) return;
+    preloadAudio(page.boxes.map(b => mappings[b.id]).filter(Boolean));
+    [pages[currentIdx + 1], pages[currentIdx - 1]].forEach(p => {
+      if (p?.imageUrl) {
+        const img = new Image();
+        img.src = p.imageUrl;
+      }
+    });
+  }, [pages, currentIdx, mappings]);
+
+  // One-time student hint: shows once per device when a page has tappable audio.
+  useEffect(() => {
+    if (isTeacher || mode !== 'play') return;
+    const page = pages[currentIdx];
+    if (!page || !page.boxes.some(b => mappings[b.id])) return;
+    try {
+      if (localStorage.getItem(TAP_HINT_KEY)) return;
+    } catch {
+      return;
+    }
+    setShowTapHint(true);
+  }, [isTeacher, mode, pages, currentIdx, mappings]);
+
+  const dismissTapHint = useCallback(() => {
+    setShowTapHint(false);
+    try {
+      localStorage.setItem(TAP_HINT_KEY, '1');
+    } catch {
+      // localStorage unavailable — hint may show again, which is harmless
+    }
+  }, []);
 
   const goToPage = (idx: number) => {
     setCurrentIdx(Math.max(0, Math.min(pages.length - 1, idx)));
@@ -244,9 +294,24 @@ export function BookReaderPage() {
             onBoxDelete={handleBoxDelete}
             onWordHeard={handleWordHeard}
             onSwipe={dir => goToPage(currentIdx + (dir === 'left' ? 1 : -1))}
+            onPrevPage={currentIdx > 0 ? () => goToPage(currentIdx - 1) : undefined}
+            onNextPage={currentIdx < pages.length - 1 ? () => goToPage(currentIdx + 1) : undefined}
           />
         )}
       </main>
+
+      {showTapHint && (
+        <div className="tapHintOverlay" role="dialog" aria-label="How to listen">
+          <div className="tapHintCard">
+            <div className="tapHintIcon" aria-hidden>🔊</div>
+            <h2 className="tapHintTitle">Tap a word to hear it</h2>
+            <p className="tapHintBody">
+              Words with a soft green highlight have audio. Tap one and listen — you earn points for every new word you hear.
+            </p>
+            <Button onClick={dismissTapHint} fullWidth>Got it</Button>
+          </div>
+        </div>
+      )}
 
       {pendingBox && (
         <AudioModal

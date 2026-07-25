@@ -6,10 +6,18 @@ import { AccountPage } from './AccountPage';
 
 const mockNavigate = jest.fn();
 const mockSignOut = jest.fn();
+const mockRefreshUser = jest.fn();
 
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
   useNavigate: () => mockNavigate,
+}));
+
+jest.mock('../services/authService', () => ({
+  changePassword: jest.fn(),
+  updateDisplayName: jest.fn(),
+  resetPassword: jest.fn(),
+  deleteAccount: jest.fn(),
 }));
 
 jest.mock('../contexts/AuthContext', () => ({
@@ -23,6 +31,7 @@ jest.mock('../contexts/AuthContext', () => ({
     },
     org: { id: 'org1', name: 'Test School', inviteCode: 'ABC123' },
     signOut: mockSignOut,
+    refreshUser: mockRefreshUser,
   }),
 }));
 
@@ -37,9 +46,23 @@ describe('AccountPage', () => {
     );
 
     expect(screen.getByRole('heading', { name: /account/i })).toBeInTheDocument();
-    expect(screen.getByText('Test User')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Test User')).toBeInTheDocument();
     expect(screen.getByText('user@test.com')).toBeInTheDocument();
     expect(screen.getByText(/teacher · test school/i)).toBeInTheDocument();
+  });
+
+  test('shows password and account management options', () => {
+    render(
+      <MemoryRouter>
+        <AccountPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByLabelText('Current password')).toBeInTheDocument();
+    expect(screen.getByLabelText('New password')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /change password/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /email me a reset link/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /delete account/i })).toBeInTheDocument();
   });
 
   test('sign out navigates home', async () => {
